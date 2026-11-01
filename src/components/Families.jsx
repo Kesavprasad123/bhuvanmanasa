@@ -13,7 +13,7 @@ function Families() {
         <div className="couple-names">
           <div className="person">
             <span className="role">GROOM</span>
-            <h3>Bhuvan</h3>
+            <h3>Bhuvan Teja Harihara Kumar</h3>
             <p>S/o</p>
             <strong>
               Kotti Venkata Subbarao
@@ -26,7 +26,7 @@ function Families() {
           <div className="ampersand">&amp;</div>
           <div className="person">
             <span className="role">BRIDE</span>
-            <h3>Manasa</h3>
+            <h3>Cholendran Manasa</h3>
             <p>D/o</p>
             <strong>
               Manyapu Satya Kiran
