@@ -183,6 +183,7 @@ function Accommodation({
   isDark: externalIsDark,
   onToggleTheme: externalToggleTheme,
   onBackToInvitation,
+  onNavigateToGallery,
 } = {}) {
   const [homeHref, setHomeHref] = useState(getHomeHref);
   const [internalDark, setInternalDark] = useState(getStoredTheme);
@@ -376,6 +377,16 @@ function Accommodation({
         </a>
 
         <div className="acc-topbar-actions">
+          {onNavigateToGallery && (
+            <button
+              type="button"
+              className="acc-host-link"
+              onClick={onNavigateToGallery}
+            >
+              🎥 చిత్రమాలిక &amp; వీడియోలు
+            </button>
+          )}
+
           {bookingConfigured && !hostLoggedIn && (
             <button
               type="button"

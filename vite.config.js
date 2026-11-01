@@ -20,7 +20,7 @@ export default defineConfig({
           const redirectScript = `<script>
             (function() {
               var path = window.location.pathname;
-              if (/\\/accommodation(?![\\w-])/i.test(path) && !path.endsWith('/')) {
+              if (/\\/(?:accommodation|gallery)(?![\\w-])/i.test(path) && !path.endsWith('/')) {
                 window.location.replace(window.location.origin + path + '/' + window.location.search + window.location.hash);
               }
             })();
@@ -41,6 +41,7 @@ export default defineConfig({
       input: {
         main: resolve(__dirname, 'index.html'),
         accommodation: resolve(__dirname, 'accommodation/index.html'),
+        gallery: resolve(__dirname, 'gallery/index.html'),
       },
       output: {
         manualChunks(id) {

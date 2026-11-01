@@ -46,10 +46,11 @@ function scanDir(dir) {
 
 scanDir(assetsDir);
 
-// 2. Check index.html and accommodation/index.html for critical preloads and non-blocking font loading
+// 2. Check index.html, accommodation/index.html, and gallery/index.html for critical preloads and non-blocking font loading
 const htmlFiles = [
   { path: path.join(projectRoot, 'index.html'), isMain: true },
   { path: path.join(projectRoot, 'accommodation', 'index.html'), isMain: false },
+  { path: path.join(projectRoot, 'gallery', 'index.html'), isMain: false },
 ];
 
 for (const htmlFile of htmlFiles) {

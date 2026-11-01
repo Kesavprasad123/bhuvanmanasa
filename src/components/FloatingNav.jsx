@@ -3,26 +3,40 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 export function getAccommodationHref() {
   if (typeof window === 'undefined') return '/accommodation/';
   const pathname = window.location.pathname || '';
-  const cleanPath = pathname.replace(/\/index\.html$/i, '').replace(/\/$/, '');
-  return `${cleanPath}/accommodation/`;
+  const root = pathname.replace(/\/(?:accommodation|gallery)(?:\/.*)?$/i, '').replace(/\/index\.html$/i, '').replace(/\/$/, '');
+  return `${root}/accommodation/`;
+}
+
+export function getGalleryHref() {
+  if (typeof window === 'undefined') return '/gallery/';
+  const pathname = window.location.pathname || '';
+  const root = pathname.replace(/\/(?:accommodation|gallery)(?:\/.*)?$/i, '').replace(/\/index\.html$/i, '').replace(/\/$/, '');
+  return `${root}/gallery/`;
 }
 
 export function getHomeHref() {
   if (typeof window === 'undefined') return '/';
   const pathname = window.location.pathname || '';
-  const parent = pathname.replace(/\/accommodation(?:\/.*)?$/i, '');
+  const parent = pathname.replace(/\/(?:accommodation|gallery)(?:\/.*)?$/i, '');
   if (!parent || parent === '') return '/';
   return parent.endsWith('/') ? parent : `${parent}/`;
 }
 
-function FloatingNav({ isDark, onToggleTheme, onNavigateToAccommodation }) {
+function FloatingNav({
+  isDark,
+  onToggleTheme,
+  onNavigateToAccommodation,
+  onNavigateToGallery,
+}) {
   const [open, setOpen] = useState(false);
   const [accommodationHref, setAccommodationHref] = useState(getAccommodationHref);
+  const [galleryHref, setGalleryHref] = useState(getGalleryHref);
   const navRef = useRef(null);
   const hoverTimeoutRef = useRef(null);
 
   useEffect(() => {
     setAccommodationHref(getAccommodationHref());
+    setGalleryHref(getGalleryHref());
   }, []);
 
   // Smooth-scroll only for in-page anchors
@@ -48,6 +62,20 @@ function FloatingNav({ isDark, onToggleTheme, onNavigateToAccommodation }) {
       }
     },
     [onNavigateToAccommodation]
+  );
+
+  // Seamless in-app navigation to gallery so music never stops
+  const handleGalleryClick = useCallback(
+    (e) => {
+      e.preventDefault();
+      setOpen(false);
+      if (onNavigateToGallery) {
+        onNavigateToGallery();
+      } else {
+        window.location.assign(getGalleryHref());
+      }
+    },
+    [onNavigateToGallery]
   );
 
   // Desktop mouse hover support
@@ -129,6 +157,7 @@ function FloatingNav({ isDark, onToggleTheme, onNavigateToAccommodation }) {
         <a href="#home" onClick={handleNavClick}>శుభారంభం</a>
         <a href="#story" onClick={handleNavClick}>వధూవరులు</a>
         <a href="#events" onClick={handleNavClick}>శుభకార్యాలు</a>
+        <a href={galleryHref} onClick={handleGalleryClick}>చిత్రమాలిక &amp; వీడియోలు</a>
         <a href="#venue" onClick={handleNavClick}>కళ్యాణ వేదిక</a>
         <a href={accommodationHref} onClick={handleAccommodationClick}>విడిది ఇల్లు</a>
       </div>
