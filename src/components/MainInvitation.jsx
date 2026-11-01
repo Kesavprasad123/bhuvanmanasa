@@ -5,6 +5,7 @@ import Hero from './Hero';
 import Countdown from './Countdown';
 import Families from './Families';
 import Events from './Events';
+import HomeVideoSection from './HomeVideoSection';
 import FeatureImage from './FeatureImage';
 import Gallery from './Gallery';
 import Venue from './Venue';
@@ -17,6 +18,9 @@ function MainInvitation({
   isDark,
   onToggleTheme,
   onNavigateToAccommodation,
+  onNavigateToGallery,
+  onPauseMusic,
+  onResumeMusic,
 }) {
   useScrollReveal(true);
 
@@ -27,11 +31,17 @@ function MainInvitation({
         isDark={isDark}
         onToggleTheme={onToggleTheme}
         onNavigateToAccommodation={onNavigateToAccommodation}
+        onNavigateToGallery={onNavigateToGallery}
       />
       <Hero />
       <Countdown />
       <Families />
       <Events />
+      <HomeVideoSection
+        onNavigateToGallery={onNavigateToGallery}
+        onPauseMusic={onPauseMusic}
+        onResumeMusic={onResumeMusic}
+      />
       <FeatureImage />
       <Gallery />
       <Venue />

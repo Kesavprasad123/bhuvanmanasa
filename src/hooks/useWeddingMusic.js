@@ -13,13 +13,13 @@ export const SONG_FILES = [
 /**
  * Resolves static asset URL relative to root deployment path.
  * Works on domain root (/), GitHub Pages subpath (/repo/), and local dev server,
- * from both / and /accommodation/.
+ * from both / and /accommodation/ or /gallery/.
  */
 export function getRootAssetUrl(relativePath) {
   const cleanRelative = relativePath.replace(/^\/+/, '');
   if (typeof window === 'undefined') return `/${cleanRelative}`;
   const pathname = window.location.pathname || '';
-  const root = pathname.replace(/\/accommodation(?:\/.*)?$/i, '');
+  const root = pathname.replace(/\/(?:accommodation|gallery)(?:\/.*)?$/i, '');
   const base = root ? (root.endsWith('/') ? root : `${root}/`) : '/';
   return `${base}${cleanRelative}`;
 }
@@ -173,6 +173,30 @@ export function useWeddingMusic({ autoStartIfActive = false, isLandingPage = fal
     } catch {}
   }, []);
 
+  const pauseMusic = useCallback(() => {
+    const audio = audioRef.current;
+    if (audio && !audio.paused) {
+      audio.pause();
+    }
+    setMusicPlaying(false);
+  }, []);
+
+  const resumeMusic = useCallback(() => {
+    const audio = audioRef.current;
+    if (audio && audio.src) {
+      audio.play().then(() => {
+        setMusicPlaying(true);
+        try {
+          sessionStorage.setItem('weddingMusicActive', 'true');
+        } catch {}
+      }).catch((err) => {
+        console.warn('Resume music error:', err);
+      });
+    } else {
+      startMusic();
+    }
+  }, [startMusic]);
+
   const toggleMusic = useCallback(() => {
     if (musicPlaying) {
       stopMusic();
@@ -251,6 +275,8 @@ export function useWeddingMusic({ autoStartIfActive = false, isLandingPage = fal
     currentSongIndex,
     startMusic,
     stopMusic,
+    pauseMusic,
+    resumeMusic,
     toggleMusic,
     playNextSong,
     handleSongEnded,

@@ -3,13 +3,16 @@ import FallingFlowers from './components/FallingFlowers';
 import Opening from './components/Opening';
 import useScrollReveal from './hooks/useScrollReveal';
 import useWeddingMusic from './hooks/useWeddingMusic';
-import { getAccommodationHref, getHomeHref } from './components/FloatingNav';
+import { getAccommodationHref, getGalleryHref, getHomeHref } from './components/FloatingNav';
 
 const loadMainInvitation = () => import('./components/MainInvitation');
 const MainInvitation = lazy(loadMainInvitation);
 
 const loadAccommodation = () => import('./components/Accommodation');
 const Accommodation = lazy(loadAccommodation);
+
+const loadGallery = () => import('./components/GalleryPage');
+const GalleryPage = lazy(loadGallery);
 
 const getStoredTheme = () => {
   try {
@@ -22,27 +25,30 @@ const getStoredTheme = () => {
 function getInitialRoute(initialPath) {
   if (initialPath) return initialPath;
   if (typeof window === 'undefined') return 'home';
+  if (/\/gallery(?:\/|$)/i.test(window.location.pathname)) return 'gallery';
   return /\/accommodation(?:\/|$)/i.test(window.location.pathname) ? 'accommodation' : 'home';
 }
 
 function App({ initialRoute = null }) {
   const [currentRoute, setCurrentRoute] = useState(() => getInitialRoute(initialRoute));
-  const isInitiallyAccommodation = currentRoute === 'accommodation';
-  const [isOpen, setIsOpen] = useState(isInitiallyAccommodation);
+  const isDirectSubpage = currentRoute === 'accommodation' || currentRoute === 'gallery';
+  const [isOpen, setIsOpen] = useState(isDirectSubpage);
   const [isDark, setIsDark] = useState(getStoredTheme);
 
   const {
     audioRef,
     musicPlaying,
     startMusic,
+    pauseMusic,
+    resumeMusic,
     toggleMusic,
     handleSongEnded,
     handleAudioError,
-  } = useWeddingMusic({ isLandingPage: !isInitiallyAccommodation });
+  } = useWeddingMusic({ isLandingPage: !isDirectSubpage });
 
   // On every initial load and page refresh of root, guarantee landing on the opening envelope screen
   useEffect(() => {
-    if (isInitiallyAccommodation) return;
+    if (isDirectSubpage) return;
 
     if ('scrollRestoration' in window.history) {
       window.history.scrollRestoration = 'manual';
@@ -55,15 +61,20 @@ function App({ initialRoute = null }) {
     if (window.location.hash) {
       window.history.replaceState(null, '', window.location.pathname + window.location.search);
     }
-  }, [isInitiallyAccommodation]);
+  }, [isDirectSubpage]);
 
   // Sync route on browser back/forward buttons
   useEffect(() => {
     const handlePopState = () => {
-      const isAcc = /\/accommodation(?:\/|$)/i.test(window.location.pathname);
-      setCurrentRoute(isAcc ? 'accommodation' : 'home');
-      if (isAcc) {
+      const path = window.location.pathname;
+      if (/\/gallery(?:\/|$)/i.test(path)) {
+        setCurrentRoute('gallery');
         setIsOpen(true);
+      } else if (/\/accommodation(?:\/|$)/i.test(path)) {
+        setCurrentRoute('accommodation');
+        setIsOpen(true);
+      } else {
+        setCurrentRoute('home');
       }
     };
     window.addEventListener('popstate', handlePopState);
@@ -75,9 +86,9 @@ function App({ initialRoute = null }) {
     document.body.classList.toggle('dark-theme', isDark);
   }, [isDark]);
 
-  // Unlock body scroll when site is revealed or in accommodation
+  // Unlock body scroll when site is revealed or on subpages
   useEffect(() => {
-    if (isOpen || currentRoute === 'accommodation') {
+    if (isOpen || currentRoute === 'accommodation' || currentRoute === 'gallery') {
       document.body.classList.remove('locked');
     } else {
       document.body.classList.add('locked');
@@ -97,6 +108,7 @@ function App({ initialRoute = null }) {
     const id = idleCallback(() => {
       loadMainInvitation();
       loadAccommodation();
+      loadGallery();
     });
     return () => (window.cancelIdleCallback ? window.cancelIdleCallback(id) : null);
   }, []);
@@ -134,6 +146,16 @@ function App({ initialRoute = null }) {
     window.scrollTo(0, 0);
   }, []);
 
+  const navigateToGallery = useCallback(() => {
+    const target = getGalleryHref();
+    if (window.location.pathname !== target) {
+      window.history.pushState(null, '', target);
+    }
+    setCurrentRoute('gallery');
+    setIsOpen(true);
+    window.scrollTo(0, 0);
+  }, []);
+
   const navigateToHome = useCallback(() => {
     const target = getHomeHref();
     if (window.location.pathname !== target) {
@@ -155,7 +177,20 @@ function App({ initialRoute = null }) {
         preload="none"
       />
 
-      {currentRoute === 'accommodation' ? (
+      {currentRoute === 'gallery' ? (
+        <Suspense fallback={<div style={{ minHeight: '100vh', background: '#fbf3e9' }} />}>
+          <GalleryPage
+            musicPlaying={musicPlaying}
+            onToggleMusic={toggleMusic}
+            isDark={isDark}
+            onToggleTheme={toggleTheme}
+            onBackToInvitation={navigateToHome}
+            onNavigateToAccommodation={navigateToAccommodation}
+            onPauseMusic={pauseMusic}
+            onResumeMusic={resumeMusic}
+          />
+        </Suspense>
+      ) : currentRoute === 'accommodation' ? (
         <Suspense fallback={<div style={{ minHeight: '100vh', background: '#fbf3e9' }} />}>
           <Accommodation
             musicPlaying={musicPlaying}
@@ -163,6 +198,7 @@ function App({ initialRoute = null }) {
             isDark={isDark}
             onToggleTheme={toggleTheme}
             onBackToInvitation={navigateToHome}
+            onNavigateToGallery={navigateToGallery}
           />
         </Suspense>
       ) : (
@@ -177,6 +213,9 @@ function App({ initialRoute = null }) {
                 isDark={isDark}
                 onToggleTheme={toggleTheme}
                 onNavigateToAccommodation={navigateToAccommodation}
+                onNavigateToGallery={navigateToGallery}
+                onPauseMusic={pauseMusic}
+                onResumeMusic={resumeMusic}
               />
             </Suspense>
           )}
