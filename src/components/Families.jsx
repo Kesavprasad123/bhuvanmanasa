@@ -26,7 +26,7 @@ function Families() {
           <div className="ampersand">&amp;</div>
           <div className="person">
             <span className="role">BRIDE</span>
-            <h3>Cholendran Manasa</h3>
+            <h3>Cholendra Manasa</h3>
             <p>D/o</p>
             <strong>
               Manyapu Satya Kiran
