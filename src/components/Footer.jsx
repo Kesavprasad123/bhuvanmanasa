@@ -9,6 +9,13 @@ function Footer() {
       </p>
       <span>❦</span>
 
+      <div className="footer-appreciation">
+        <p className="appreciation-label">With Love &amp; Gratitude</p>
+        <p className="appreciation-text">Website lovingly designed &amp; developed by</p>
+        <p className="appreciation-names">Madhavi &amp; Kesava</p>
+        <p className="appreciation-relation">(Groom&apos;s Younger Sister &amp; Brother)</p>
+      </div>
+
       <div className="copyright">
         © 2026 Bhuvan &hearts; Manasa
         <br />

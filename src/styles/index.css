@@ -2411,6 +2411,49 @@
     color: #d8ad67
   }
 
+  .footer-appreciation {
+    margin: 22px auto 0;
+    max-width: 520px;
+    padding: 0 16px;
+  }
+
+  footer .appreciation-label {
+    font-family: "Playfair Display", serif;
+    font-size: 13px;
+    font-weight: 500;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: #d8ad67;
+    margin: 0 0 6px !important;
+  }
+
+  footer .appreciation-text {
+    font-family: "Playfair Display", serif;
+    font-size: 14px;
+    font-weight: 400;
+    letter-spacing: 0.8px;
+    color: #f1dfc8;
+    margin: 0 0 4px !important;
+  }
+
+  footer .appreciation-names {
+    font-family: "Cormorant Garamond", serif;
+    font-size: 22px;
+    font-weight: 600;
+    letter-spacing: 1px;
+    color: #fdf5ec;
+    margin: 0 0 3px !important;
+  }
+
+  footer .appreciation-relation {
+    font-family: "Playfair Display", serif;
+    font-size: 12px;
+    font-style: italic;
+    letter-spacing: 0.6px;
+    color: rgba(241, 223, 200, 0.75);
+    margin: 0 !important;
+  }
+
   .copyright {
     margin-top: 25px;
     padding-top: 18px;
@@ -2583,6 +2626,23 @@
 
     .final-names {
       font-size: 53px
+    }
+
+    footer .appreciation-label {
+      font-size: 11px;
+      letter-spacing: 1.5px;
+    }
+
+    footer .appreciation-text {
+      font-size: 12px;
+    }
+
+    footer .appreciation-names {
+      font-size: 19px;
+    }
+
+    footer .appreciation-relation {
+      font-size: 11px;
     }
   }
 
