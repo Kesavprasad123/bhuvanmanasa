@@ -213,7 +213,8 @@ function ReelCard({
               onClick={handleTogglePlay}
               aria-label={isPlaying ? 'Pause reel' : 'Play reel'}
             >
-              {isPlaying ? '⏸ Pause' : '▶ Play'}
+              <span className="hvs-btn-icon" aria-hidden="true">{isPlaying ? '⏸' : '▶'}</span>
+              <span className="hvs-btn-text">{isPlaying ? 'Pause' : 'Play'}</span>
             </button>
             <button
               type="button"
@@ -221,7 +222,8 @@ function ReelCard({
               onClick={handleSoundClick}
               aria-label={isUnmuted ? 'Mute audio' : 'Unmute audio'}
             >
-              {isUnmuted ? '🔊 Mute' : '🔈 Unmute'}
+              <span className="hvs-btn-icon" aria-hidden="true">{isUnmuted ? '🔊' : '🔈'}</span>
+              <span className="hvs-btn-text">{isUnmuted ? 'Mute' : 'Sound'}</span>
             </button>
             <button
               type="button"
@@ -230,7 +232,8 @@ function ReelCard({
               aria-label="Extend and watch full video in high resolution"
               title="Extend / Full View"
             >
-              ⛶ Extend
+              <span className="hvs-btn-icon" aria-hidden="true">⛶</span>
+              <span className="hvs-btn-text">Extend</span>
             </button>
           </div>
 
@@ -251,8 +254,22 @@ function HomeVideoSection({ onNavigateToGallery, onPauseMusic, onResumeMusic }) 
   const [unmutedId, setUnmutedId] = useState(null);
   const [expandedVideo, setExpandedVideo] = useState(null);
   const [showExitConfirm, setShowExitConfirm] = useState(false);
+  const [activeReelDot, setActiveReelDot] = useState(0);
   const modalVideoRef = useRef(null);
   const sectionRef = useRef(null);
+  const showcaseRef = useRef(null);
+
+  const handleShowcaseScroll = useCallback(() => {
+    const el = showcaseRef.current;
+    if (!el) return;
+    const scrollLeft = el.scrollLeft;
+    const cardWidth = el.firstElementChild ? el.firstElementChild.offsetWidth + 14 : 280;
+    const newIndex = Math.min(
+      REEL_VIDEOS.length - 1,
+      Math.max(0, Math.round(scrollLeft / cardWidth))
+    );
+    setActiveReelDot(newIndex);
+  }, []);
 
   // Keep a stable ref of audio activity for unmount cleanup ONLY
   const isAudioActiveRef = useRef(false);
@@ -421,7 +438,11 @@ function HomeVideoSection({ onNavigateToGallery, onPauseMusic, onResumeMusic }) 
         </div>
 
         {/* 4-Reels Showcase Container */}
-        <div className="hvs-reels-showcase">
+        <div
+          ref={showcaseRef}
+          className="hvs-reels-showcase"
+          onScroll={handleShowcaseScroll}
+        >
           {REEL_VIDEOS.map((video) => (
             <ReelCard
               key={video.id}
@@ -432,6 +453,28 @@ function HomeVideoSection({ onNavigateToGallery, onPauseMusic, onResumeMusic }) 
               onVideoPause={handleVideoPause}
               onVideoPlayWithSound={handleVideoPlayWithSound}
               onOpenExpand={handleOpenExpand}
+            />
+          ))}
+        </div>
+
+        {/* Mobile carousel indicator dots */}
+        <div className="hvs-mobile-dots" aria-label="Reel indicator dots">
+          {REEL_VIDEOS.map((video, index) => (
+            <button
+              key={video.id}
+              type="button"
+              className={`hvs-dot${activeReelDot === index ? ' is-active' : ''}`}
+              onClick={() => {
+                const el = showcaseRef.current;
+                if (el && el.children[index]) {
+                  el.children[index].scrollIntoView({
+                    behavior: 'smooth',
+                    inline: 'center',
+                    block: 'nearest',
+                  });
+                }
+              }}
+              aria-label={`Scroll to reel ${index + 1}: ${video.title}`}
             />
           ))}
         </div>

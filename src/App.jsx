@@ -129,6 +129,7 @@ function App({ initialRoute = null }) {
   const handleOpenEnvelope = useCallback(() => {
     if (isOpen) return;
     startMusic();
+    window.scrollTo(0, 0);
     setTimeout(() => {
       setIsOpen(true);
       window.scrollTo(0, 0);
