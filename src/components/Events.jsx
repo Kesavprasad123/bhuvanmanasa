@@ -2,18 +2,8 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 
 /**
  * ╔══════════════════════════════════════════════════════════════════╗
- * ║  HOW TO ADD YOUR GOOGLE MAPS LINKS & COORDINATES               ║
- * ║                                                                ║
- * ║  For each event below, update these two fields:                ║
- * ║                                                                ║
- * ║  1. mapUrl  → paste the full Google Maps link for the venue    ║
- * ║     Example: 'https://maps.google.com/?q=17.3850,78.4867'     ║
- * ║                                                                ║
- * ║  2. coordinates → { lat: <latitude>, lng: <longitude> }       ║
- * ║     Example: { lat: 17.3850, lng: 78.4867 }                   ║
- * ║                                                                ║
- * ║  You can get lat/lng from Google Maps by right-clicking a      ║
- * ║  location and selecting the coordinates.                       ║
+ * ║  WEDDING CELEBRATIONS & SACRED FESTIVITIES                       ║
+ * ║  7 Auspicious Ceremonies of Bhuvan & Manasa                      ║
  * ╚══════════════════════════════════════════════════════════════════╝
  */
 
@@ -115,9 +105,9 @@ const EVENTS = [
   },
 ];
 
-/* Haversine formula — calculates distance (km) between two lat/lng points */
+/* Haversine distance formula */
 function haversineDistance(lat1, lon1, lat2, lon2) {
-  const R = 6371; // Earth's radius in km
+  const R = 6371;
   const toRad = (deg) => (deg * Math.PI) / 180;
   const dLat = toRad(lat2 - lat1);
   const dLon = toRad(lon2 - lon1);
@@ -134,9 +124,7 @@ function Events() {
   const [flippedCards, setFlippedCards] = useState({});
   const [userLocation, setUserLocation] = useState(null);
 
-  const wrapperRef = useRef(null);
-  const trackRef = useRef(null);
-  const cardRefs = useRef([]);
+  const timelineNavRef = useRef(null);
   const tabRefs = useRef([]);
   const touchStartXRef = useRef(null);
   const touchEndXRef = useRef(null);
@@ -152,37 +140,26 @@ function Events() {
     setActiveIndex((prev) => (prev - 1 + total) % total);
   }, [total]);
 
-  // Smoothly center the active card in the showcase track
-  const updateTrackPosition = useCallback(() => {
-    const track = trackRef.current;
-    const wrapper = wrapperRef.current;
-    const card = cardRefs.current[activeIndex];
-    if (!track || !wrapper || !card) return;
+  // Scroll ONLY the tab bar container horizontally when user changes tabs (NEVER the page window!)
+  const scrollTabPillIntoView = useCallback((index) => {
+    const nav = timelineNavRef.current;
+    const tab = tabRefs.current[index];
+    if (!nav || !tab) return;
+    const navCenter = nav.clientWidth / 2;
+    const tabCenter = tab.offsetLeft + tab.clientWidth / 2;
+    nav.scrollTo({
+      left: tabCenter - navCenter,
+      behavior: 'smooth',
+    });
+  }, []);
 
-    const wrapperCenter = wrapper.clientWidth / 2;
-    const cardCenter = card.offsetLeft + card.clientWidth / 2;
-    const targetTranslateX = wrapperCenter - cardCenter;
-    track.style.transform = `translate3d(${targetTranslateX}px, 0, 0)`;
-  }, [activeIndex]);
+  const handleSelectEvent = useCallback((index) => {
+    setFlippedCards({});
+    setActiveIndex(index);
+    scrollTabPillIntoView(index);
+  }, [scrollTabPillIntoView]);
 
-  useEffect(() => {
-    updateTrackPosition();
-    window.addEventListener('resize', updateTrackPosition);
-    return () => window.removeEventListener('resize', updateTrackPosition);
-  }, [updateTrackPosition]);
-
-  // Keep active timeline tab pill in view on mobile
-  useEffect(() => {
-    if (tabRefs.current[activeIndex]) {
-      tabRefs.current[activeIndex].scrollIntoView({
-        behavior: 'smooth',
-        inline: 'center',
-        block: 'nearest',
-      });
-    }
-  }, [activeIndex]);
-
-  // Get user's geolocation for distance calculation
+  // Request user's location for venue distance estimation
   useEffect(() => {
     if ('geolocation' in navigator) {
       navigator.geolocation.getCurrentPosition(
@@ -192,9 +169,7 @@ function Events() {
             lng: position.coords.longitude,
           });
         },
-        () => {
-          // Silently fail — distance just won't show
-        },
+        () => {},
         { enableHighAccuracy: false, timeout: 8000, maximumAge: 300000 }
       );
     }
@@ -213,7 +188,7 @@ function Events() {
   const handleTouchEnd = () => {
     if (touchStartXRef.current === null || touchEndXRef.current === null) return;
     const diff = touchStartXRef.current - touchEndXRef.current;
-    const minSwipeDistance = 40;
+    const minSwipeDistance = 45;
 
     if (diff > minSwipeDistance) {
       goToNext();
@@ -234,13 +209,13 @@ function Events() {
     }
   };
 
-  // Toggle flip for a card
+  // Toggle 3D flip to view venue map
   const toggleFlip = (index, e) => {
     e.stopPropagation();
     setFlippedCards((prev) => ({ ...prev, [index]: !prev[index] }));
   };
 
-  // Calculate distance from user to venue
+  // Calculate distance
   const getDistance = (eventCoords) => {
     if (!userLocation || !eventCoords) return null;
     const dist = haversineDistance(
@@ -252,12 +227,19 @@ function Events() {
     return dist < 1 ? `${(dist * 1000).toFixed(0)} m` : `${dist.toFixed(1)} km`;
   };
 
+  // Card position logic: 1 active, 1 prev, 1 next; all others hidden (ZERO wrapping collisions!)
+  const getCardStatus = (index) => {
+    if (index === activeIndex) return 'is-active';
+    if (index === (activeIndex - 1 + total) % total) return 'is-prev';
+    if (index === (activeIndex + 1) % total) return 'is-next';
+    return 'is-offstage';
+  };
+
   return (
     <section
       id="events"
       className="events-section section-cream"
       onKeyDown={handleKeyDown}
-      tabIndex={0}
       aria-label="Wedding Events Showcase"
     >
       <div className="section-inner wide reveal">
@@ -268,7 +250,12 @@ function Events() {
         </p>
 
         {/* Quick Event Selector Timeline Bar */}
-        <div className="events-timeline-nav" role="tablist" aria-label="Wedding events timeline">
+        <div
+          ref={timelineNavRef}
+          className="events-timeline-nav"
+          role="tablist"
+          aria-label="Wedding events timeline"
+        >
           {EVENTS.map((event, index) => {
             const isSelected = activeIndex === index;
             return (
@@ -279,10 +266,7 @@ function Events() {
                 role="tab"
                 aria-selected={isSelected}
                 className={`events-timeline-pill${isSelected ? ' is-active' : ''}`}
-                onClick={() => {
-                  setFlippedCards({});
-                  setActiveIndex(index);
-                }}
+                onClick={() => handleSelectEvent(index)}
               >
                 <span className="pill-num">{event.number}</span>
                 <span className="pill-title">{event.title}</span>
@@ -291,58 +275,60 @@ function Events() {
           })}
         </div>
 
-        {/* Grand Showcase Slider Container */}
+        {/* Stage Container */}
         <div
-          ref={wrapperRef}
-          className="events-showcase-wrapper"
+          className="events-stage-wrapper"
           onTouchStart={handleTouchStart}
           onTouchMove={handleTouchMove}
           onTouchEnd={handleTouchEnd}
         >
-          {/* Previous Event Button */}
+          {/* Navigation Chevrons */}
           <button
             type="button"
             className="events-nav-chevron prev"
             onClick={goToPrev}
-            aria-label="Previous event"
+            aria-label="Previous celebration"
           >
             &#8249;
           </button>
 
-          {/* Next Event Button */}
           <button
             type="button"
             className="events-nav-chevron next"
             onClick={goToNext}
-            aria-label="Next event"
+            aria-label="Next celebration"
           >
             &#8250;
           </button>
 
-          {/* Natural Horizontal Slider Track (Zero Wrapping Collisions) */}
-          <div ref={trackRef} className="events-showcase-track">
+          {/* 3-Card Stage Area */}
+          <div className="events-stage-carousel">
             {EVENTS.map((event, index) => {
-              const isActive = activeIndex === index;
-              const isPrev = activeIndex - 1 === index;
-              const isNext = activeIndex + 1 === index;
+              const status = getCardStatus(index);
+              const isActive = status === 'is-active';
+              const isPrev = status === 'is-prev';
+              const isNext = status === 'is-next';
               const isFlipped = !!flippedCards[index];
               const distance = getDistance(event.coordinates);
 
-              let statusClass = 'is-inactive';
-              if (isActive) statusClass = 'is-active';
-              else if (isPrev) statusClass = 'is-prev';
-              else if (isNext) statusClass = 'is-next';
+              // Off-stage cards are not rendered into the active visual stage to avoid any cross-flying
+              if (status === 'is-offstage') {
+                return (
+                  <article
+                    key={event.number}
+                    className="stage-card is-offstage"
+                    aria-hidden="true"
+                  />
+                );
+              }
 
               return (
                 <article
                   key={event.number}
-                  ref={(el) => (cardRefs.current[index] = el)}
-                  className={`showcase-card ${statusClass} ${isFlipped ? 'is-flipped' : ''}`}
+                  className={`stage-card ${status} ${isFlipped ? 'is-flipped' : ''}`}
                   onClick={() => {
-                    if (!isActive) {
-                      setFlippedCards({});
-                      setActiveIndex(index);
-                    }
+                    if (isPrev) goToPrev();
+                    if (isNext) goToNext();
                   }}
                   role="button"
                   tabIndex={isActive ? 0 : -1}
@@ -354,7 +340,7 @@ function Events() {
                     className="card-face card-front"
                     style={{ backgroundImage: `url('${event.image}')` }}
                   >
-                    {/* Gradient overlay */}
+                    {/* Gradient Overlay */}
                     <div className="stage-card-overlay"></div>
 
                     {/* Top Badge */}
@@ -365,7 +351,7 @@ function Events() {
                       <span className="stage-event-telugu">{event.teluguTitle}</span>
                     </div>
 
-                    {/* Card Main Info */}
+                    {/* Card Content Details */}
                     <div className="stage-card-content">
                       <h3 className="stage-card-title">{event.title}</h3>
                       <p className="stage-card-subtitle">{event.subtitle}</p>
@@ -412,7 +398,7 @@ function Events() {
                     )}
                   </div>
 
-                  {/* ===== BACK FACE (Venue & Navigation) ===== */}
+                  {/* ===== BACK FACE (Venue Map & Navigation) ===== */}
                   <div className="card-face card-back">
                     <div className="card-back-inner">
                       <div className="back-header">
@@ -421,7 +407,7 @@ function Events() {
                         <p className="back-venue">{event.venue}</p>
                       </div>
 
-                      {/* Embedded Map */}
+                      {/* Embedded Google Map */}
                       <div className="back-map-container">
                         {event.coordinates ? (
                           <iframe
@@ -439,7 +425,7 @@ function Events() {
                         )}
                       </div>
 
-                      {/* Distance badge if available */}
+                      {/* Distance badge */}
                       {distance && (
                         <div className="back-distance">
                           <span className="distance-icon">🚗</span>
@@ -449,7 +435,7 @@ function Events() {
                         </div>
                       )}
 
-                      {/* Directions Link */}
+                      {/* Direct navigation link */}
                       {event.mapUrl ? (
                         <a
                           href={event.mapUrl}
@@ -478,7 +464,7 @@ function Events() {
                     </div>
                   </div>
 
-                  {/* Interactive hint for side cards */}
+                  {/* Visual click hint for side cards */}
                   {!isActive && (
                     <div className="side-card-hint">
                       <span>{isPrev ? '‹ View Event' : 'View Event ›'}</span>
@@ -490,13 +476,13 @@ function Events() {
           </div>
         </div>
 
-        {/* Events Bottom Pagination & Counter */}
+        {/* Bottom Pagination & Event Counter */}
         <div className="events-stage-pagination" aria-label="Event indicator">
           <button
             type="button"
             className="events-page-arrow"
             onClick={goToPrev}
-            aria-label="Previous event"
+            aria-label="Previous celebration"
           >
             ‹
           </button>
@@ -506,10 +492,7 @@ function Events() {
                 key={event.number}
                 type="button"
                 className={`event-dot${activeIndex === index ? ' is-active' : ''}`}
-                onClick={() => {
-                  setFlippedCards({});
-                  setActiveIndex(index);
-                }}
+                onClick={() => handleSelectEvent(index)}
                 aria-label={`Go to event ${event.number} - ${event.title}`}
                 title={`Event ${event.number}: ${event.title}`}
               />
@@ -519,7 +502,7 @@ function Events() {
             type="button"
             className="events-page-arrow"
             onClick={goToNext}
-            aria-label="Next event"
+            aria-label="Next celebration"
           >
             ›
           </button>
