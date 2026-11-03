@@ -133,6 +133,11 @@ function Events() {
   const [activeIndex, setActiveIndex] = useState(0);
   const [flippedCards, setFlippedCards] = useState({});
   const [userLocation, setUserLocation] = useState(null);
+
+  const wrapperRef = useRef(null);
+  const trackRef = useRef(null);
+  const cardRefs = useRef([]);
+  const tabRefs = useRef([]);
   const touchStartXRef = useRef(null);
   const touchEndXRef = useRef(null);
   const total = EVENTS.length;
@@ -147,8 +152,35 @@ function Events() {
     setActiveIndex((prev) => (prev - 1 + total) % total);
   }, [total]);
 
-  // Note: Auto-scroll interval intentionally removed so cards remain steady,
-  // peaceful, and rock-solid without any unsolicited rolling while guests read details.
+  // Smoothly center the active card in the showcase track
+  const updateTrackPosition = useCallback(() => {
+    const track = trackRef.current;
+    const wrapper = wrapperRef.current;
+    const card = cardRefs.current[activeIndex];
+    if (!track || !wrapper || !card) return;
+
+    const wrapperCenter = wrapper.clientWidth / 2;
+    const cardCenter = card.offsetLeft + card.clientWidth / 2;
+    const targetTranslateX = wrapperCenter - cardCenter;
+    track.style.transform = `translate3d(${targetTranslateX}px, 0, 0)`;
+  }, [activeIndex]);
+
+  useEffect(() => {
+    updateTrackPosition();
+    window.addEventListener('resize', updateTrackPosition);
+    return () => window.removeEventListener('resize', updateTrackPosition);
+  }, [updateTrackPosition]);
+
+  // Keep active timeline tab pill in view on mobile
+  useEffect(() => {
+    if (tabRefs.current[activeIndex]) {
+      tabRefs.current[activeIndex].scrollIntoView({
+        behavior: 'smooth',
+        inline: 'center',
+        block: 'nearest',
+      });
+    }
+  }, [activeIndex]);
 
   // Get user's geolocation for distance calculation
   useEffect(() => {
@@ -181,7 +213,7 @@ function Events() {
   const handleTouchEnd = () => {
     if (touchStartXRef.current === null || touchEndXRef.current === null) return;
     const diff = touchStartXRef.current - touchEndXRef.current;
-    const minSwipeDistance = 45;
+    const minSwipeDistance = 40;
 
     if (diff > minSwipeDistance) {
       goToNext();
@@ -200,19 +232,6 @@ function Events() {
     } else if (e.key === 'ArrowRight') {
       goToNext();
     }
-  };
-
-  // Card position helper
-  const getCardPositionClass = (index) => {
-    let diff = index - activeIndex;
-    if (diff > total / 2) diff -= total;
-    if (diff < -total / 2) diff += total;
-
-    if (diff === 0) return 'is-active';
-    if (diff === -1) return 'is-prev';
-    if (diff === 1) return 'is-next';
-    if (diff < -1) return 'is-hidden-left';
-    return 'is-hidden-right';
   };
 
   // Toggle flip for a card
@@ -239,7 +258,7 @@ function Events() {
       className="events-section section-cream"
       onKeyDown={handleKeyDown}
       tabIndex={0}
-      aria-label="Wedding Events Carousel"
+      aria-label="Wedding Events Showcase"
     >
       <div className="section-inner wide reveal">
         <p className="eyebrow">SAVE THE DATES</p>
@@ -255,6 +274,7 @@ function Events() {
             return (
               <button
                 key={event.number}
+                ref={(el) => (tabRefs.current[index] = el)}
                 type="button"
                 role="tab"
                 aria-selected={isSelected}
@@ -271,49 +291,58 @@ function Events() {
           })}
         </div>
 
-        {/* 3D Stage Container */}
+        {/* Grand Showcase Slider Container */}
         <div
-          className="events-stage-wrapper"
+          ref={wrapperRef}
+          className="events-showcase-wrapper"
           onTouchStart={handleTouchStart}
           onTouchMove={handleTouchMove}
           onTouchEnd={handleTouchEnd}
         >
-          {/* Navigation Arrows */}
+          {/* Previous Event Button */}
           <button
             type="button"
-            className="stage-nav-btn prev"
+            className="events-nav-chevron prev"
             onClick={goToPrev}
             aria-label="Previous event"
           >
             &#8249;
           </button>
 
+          {/* Next Event Button */}
           <button
             type="button"
-            className="stage-nav-btn next"
+            className="events-nav-chevron next"
             onClick={goToNext}
             aria-label="Next event"
           >
             &#8250;
           </button>
 
-          {/* 3D Stage */}
-          <div className="events-stage">
+          {/* Natural Horizontal Slider Track (Zero Wrapping Collisions) */}
+          <div ref={trackRef} className="events-showcase-track">
             {EVENTS.map((event, index) => {
-              const positionClass = getCardPositionClass(index);
-              const isActive = positionClass === 'is-active';
-              const isPrev = positionClass === 'is-prev';
-              const isNext = positionClass === 'is-next';
+              const isActive = activeIndex === index;
+              const isPrev = activeIndex - 1 === index;
+              const isNext = activeIndex + 1 === index;
               const isFlipped = !!flippedCards[index];
               const distance = getDistance(event.coordinates);
+
+              let statusClass = 'is-inactive';
+              if (isActive) statusClass = 'is-active';
+              else if (isPrev) statusClass = 'is-prev';
+              else if (isNext) statusClass = 'is-next';
 
               return (
                 <article
                   key={event.number}
-                  className={`stage-card ${positionClass} ${isFlipped ? 'is-flipped' : ''}`}
+                  ref={(el) => (cardRefs.current[index] = el)}
+                  className={`showcase-card ${statusClass} ${isFlipped ? 'is-flipped' : ''}`}
                   onClick={() => {
-                    if (isPrev) goToPrev();
-                    if (isNext) goToNext();
+                    if (!isActive) {
+                      setFlippedCards({});
+                      setActiveIndex(index);
+                    }
                   }}
                   role="button"
                   tabIndex={isActive ? 0 : -1}
@@ -343,7 +372,7 @@ function Events() {
 
                       <div className="stage-card-meta">
                         <div className="meta-item">
-                          <span className="meta-icon" aria-hidden="true">🕒</span>
+                          <span className="meta-icon" aria-hidden="true">🕐</span>
                           <div className="meta-text">
                             <small>TIME</small>
                             <strong>{event.time}</strong>
@@ -368,71 +397,59 @@ function Events() {
                       </div>
                     </div>
 
-                    {/* Flip trigger arrow at the bottom of front face */}
+                    {/* Flip Trigger Button on Active Card */}
                     {isActive && (
                       <button
                         type="button"
                         className="flip-trigger-btn"
                         onClick={(e) => toggleFlip(index, e)}
                         aria-label="View venue location on map"
-                        title="View location on map"
                       >
                         <span className="flip-arrow-icon">📍</span>
-                        <span className="flip-arrow-text">View Map</span>
-                        <span className="flip-arrow-chevron">↻</span>
+                        <span className="flip-arrow-text">View Venue Map &amp; Navigation</span>
+                        <span className="flip-arrow-chevron" aria-hidden="true">↻</span>
                       </button>
                     )}
                   </div>
 
-                  {/* ===== BACK FACE ===== */}
+                  {/* ===== BACK FACE (Venue & Navigation) ===== */}
                   <div className="card-face card-back">
                     <div className="card-back-inner">
-                      {/* Back header */}
                       <div className="back-header">
-                        <span className="back-event-badge">
-                          EVENT {event.number} / 07
-                        </span>
-                        <h3 className="back-title">{event.title}</h3>
+                        <span className="back-event-badge">EVENT {event.number} / 07</span>
+                        <h4 className="back-title">{event.title}</h4>
                         <p className="back-venue">{event.venue}</p>
                       </div>
 
-                      {/* Map section */}
+                      {/* Embedded Map */}
                       <div className="back-map-container">
                         {event.coordinates ? (
                           <iframe
-                            title={`${event.title} location`}
+                            title={`Map for ${event.title}`}
                             className="back-map-iframe"
-                            src={`https://maps.google.com/maps?q=${event.coordinates.lat},${event.coordinates.lng}&z=15&output=embed`}
                             loading="lazy"
-                            allowFullScreen
-                          ></iframe>
-                        ) : event.venue && event.venue !== 'Venue to be announced' ? (
-                          <iframe
-                            title={`${event.title} location`}
-                            className="back-map-iframe"
-                            src={`https://maps.google.com/maps?q=${encodeURIComponent(event.venue)}&z=15&output=embed`}
-                            loading="lazy"
-                            allowFullScreen
-                          ></iframe>
+                            referrerPolicy="no-referrer-when-downgrade"
+                            src={`https://maps.google.com/maps?q=${event.coordinates.lat},${event.coordinates.lng}&hl=en&z=15&output=embed`}
+                          />
                         ) : (
                           <div className="back-map-placeholder">
-                            <span className="map-placeholder-icon">🗺️</span>
-                            <p>Location will be updated soon</p>
+                            <span className="map-placeholder-icon">📍</span>
+                            <p>Venue map coming soon</p>
                           </div>
                         )}
                       </div>
 
-                      {/* Distance from user */}
+                      {/* Distance badge if available */}
                       {distance && (
                         <div className="back-distance">
-                          <span className="distance-icon">🧭</span>
+                          <span className="distance-icon">🚗</span>
                           <span className="distance-text">
-                            <strong>{distance}</strong> from your location
+                            <strong>{distance}</strong> away from your location
                           </span>
                         </div>
                       )}
 
-                      {/* Navigate button */}
+                      {/* Directions Link */}
                       {event.mapUrl ? (
                         <a
                           href={event.mapUrl}
@@ -461,10 +478,10 @@ function Events() {
                     </div>
                   </div>
 
-                  {/* Interactive click-hint for side cards */}
+                  {/* Interactive hint for side cards */}
                   {!isActive && (
                     <div className="side-card-hint">
-                      <span>{isPrev ? '‹ View' : 'View ›'}</span>
+                      <span>{isPrev ? '‹ View Event' : 'View Event ›'}</span>
                     </div>
                   )}
                 </article>
