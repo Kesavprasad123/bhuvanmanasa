@@ -167,8 +167,8 @@
 
 .gallery-videos-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-  gap: clamp(20px, 3vw, 32px);
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: clamp(18px, 2.5vw, 28px);
 }
 
 .gallery-video-card {
@@ -190,7 +190,7 @@
 .video-card-player-wrap {
   position: relative;
   width: 100%;
-  aspect-ratio: 16 / 9;
+  aspect-ratio: 9 / 16;
   background: #000;
   overflow: hidden;
 }
@@ -198,8 +198,17 @@
 .gallery-video-media {
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: contain;
   display: block;
+  background: #000;
+}
+
+.gallery-video-media:fullscreen,
+.gallery-video-media:-webkit-full-screen {
+  object-fit: contain !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  background: #000 !important;
 }
 
 .video-badge-pill {

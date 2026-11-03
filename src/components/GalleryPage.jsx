@@ -9,6 +9,16 @@ const asset = (p) => `${cleanBase}${p.replace(/^\/+/, '')}`;
 
 export const WEDDING_VIDEOS = [
   {
+    id: 'groom-first',
+    title: 'The Groom\'s Grand Reveal',
+    teluguTitle: 'పెళ్ళికొడుకు ఆగమనం',
+    subtitle: 'The magnificent first look of Bhuvan as the groom — dressed in regal tradition.',
+    src: asset('videos/Bhuvan_Manasa_Groom_First_Full_HD.mp4'),
+    badge: 'Groom First Look',
+    category: 'videos',
+    duration: 'Full HD',
+  },
+  {
     id: 'cinema-invitation',
     title: 'Cinematic Wedding Invitation Film',
     teluguTitle: 'సినీమాటిక్ వెడ్డింగ్ ఇన్విటేషన్',
@@ -31,9 +41,9 @@ export const WEDDING_VIDEOS = [
   {
     id: 'family-invitation',
     title: 'Family Invitation & Blessings',
-    teluguTitle: 'కుటుంబ సభ్యుల ఆహ్వానం',
-    subtitle: 'Heartfelt invitation and auspicious blessings from both families.',
-    src: asset('videos/Teja_Manasa_Invitation_Family_Photo_Full_HD.mp4'),
+    teluguTitle: 'కుటుంబ ఆశీర్వాదాలు',
+    subtitle: 'A heartfelt invitation and auspicious blessings from both families.',
+    src: asset('videos/Teja_Manasa_Telugu_Corrected_HD.mp4'),
     badge: 'Family Invitation',
     category: 'videos',
     duration: 'Full HD',

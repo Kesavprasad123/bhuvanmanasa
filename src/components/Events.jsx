@@ -131,7 +131,6 @@ function haversineDistance(lat1, lon1, lat2, lon2) {
 
 function Events() {
   const [activeIndex, setActiveIndex] = useState(0);
-  const [isHovered, setIsHovered] = useState(false);
   const [flippedCards, setFlippedCards] = useState({});
   const [userLocation, setUserLocation] = useState(null);
   const touchStartXRef = useRef(null);
@@ -148,17 +147,8 @@ function Events() {
     setActiveIndex((prev) => (prev - 1 + total) % total);
   }, [total]);
 
-  // Continuous auto-scroll (pauses on hover or when card is flipped)
-  useEffect(() => {
-    const isAnyCardFlipped = Object.values(flippedCards).some(Boolean);
-    if (isHovered || isAnyCardFlipped) return;
-
-    const timer = setInterval(() => {
-      goToNext();
-    }, 5000); // gentle 5-second interval
-
-    return () => clearInterval(timer);
-  }, [isHovered, flippedCards, goToNext]);
+  // Note: Auto-scroll interval intentionally removed so cards remain steady,
+  // peaceful, and rock-solid without any unsolicited rolling while guests read details.
 
   // Get user's geolocation for distance calculation
   useEffect(() => {
@@ -258,11 +248,32 @@ function Events() {
           Seven sacred celebrations leading to a lifetime of togetherness.
         </p>
 
+        {/* Quick Event Selector Timeline Bar */}
+        <div className="events-timeline-nav" role="tablist" aria-label="Wedding events timeline">
+          {EVENTS.map((event, index) => {
+            const isSelected = activeIndex === index;
+            return (
+              <button
+                key={event.number}
+                type="button"
+                role="tab"
+                aria-selected={isSelected}
+                className={`events-timeline-pill${isSelected ? ' is-active' : ''}`}
+                onClick={() => {
+                  setFlippedCards({});
+                  setActiveIndex(index);
+                }}
+              >
+                <span className="pill-num">{event.number}</span>
+                <span className="pill-title">{event.title}</span>
+              </button>
+            );
+          })}
+        </div>
+
         {/* 3D Stage Container */}
         <div
           className="events-stage-wrapper"
-          onMouseEnter={() => setIsHovered(true)}
-          onMouseLeave={() => setIsHovered(false)}
           onTouchStart={handleTouchStart}
           onTouchMove={handleTouchMove}
           onTouchEnd={handleTouchEnd}
@@ -460,6 +471,44 @@ function Events() {
               );
             })}
           </div>
+        </div>
+
+        {/* Events Bottom Pagination & Counter */}
+        <div className="events-stage-pagination" aria-label="Event indicator">
+          <button
+            type="button"
+            className="events-page-arrow"
+            onClick={goToPrev}
+            aria-label="Previous event"
+          >
+            ‹
+          </button>
+          <div className="events-dots" role="tablist">
+            {EVENTS.map((event, index) => (
+              <button
+                key={event.number}
+                type="button"
+                className={`event-dot${activeIndex === index ? ' is-active' : ''}`}
+                onClick={() => {
+                  setFlippedCards({});
+                  setActiveIndex(index);
+                }}
+                aria-label={`Go to event ${event.number} - ${event.title}`}
+                title={`Event ${event.number}: ${event.title}`}
+              />
+            ))}
+          </div>
+          <button
+            type="button"
+            className="events-page-arrow"
+            onClick={goToNext}
+            aria-label="Next event"
+          >
+            ›
+          </button>
+          <span className="events-counter-label">
+            Event {EVENTS[activeIndex].number} of 07 · {EVENTS[activeIndex].title}
+          </span>
         </div>
       </div>
     </section>
