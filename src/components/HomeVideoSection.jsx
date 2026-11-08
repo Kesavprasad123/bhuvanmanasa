@@ -47,50 +47,51 @@ function ReelCard({
   video,
   isUnmuted,
   isModalOpen,
+  shouldPlay,
   onToggleMute,
   onVideoPause,
   onVideoPlayWithSound,
   onOpenExpand,
 }) {
   const videoRef = useRef(null);
-  const [isPlaying, setIsPlaying] = useState(true);
+  const [isPlaying, setIsPlaying] = useState(false);
   const [progress, setProgress] = useState(0);
 
-  // Sync mute state directly on video element
+  // Set Android-compatible autoplay attributes on DOM mount
   useEffect(() => {
     const el = videoRef.current;
     if (!el) return;
-    el.muted = !isUnmuted;
-  }, [isUnmuted]);
+    el.defaultMuted = true;
+    el.muted = true;
+    el.setAttribute('muted', '');
+    el.setAttribute('playsinline', '');
+    el.setAttribute('webkit-playsinline', 'true');
+    el.setAttribute('x5-playsinline', 'true');
+  }, []);
 
-  // Pause card video when the extended modal is open; resume loop when closed
+  // Declarative playback management: prevents hardware decoder starvation on Android
   useEffect(() => {
     const el = videoRef.current;
     if (!el) return;
-    if (isModalOpen) {
+
+    if (isModalOpen || !shouldPlay) {
       el.pause();
       setIsPlaying(false);
     } else {
       el.muted = !isUnmuted;
-      el.play().then(() => setIsPlaying(true)).catch(() => {});
+      if (!isUnmuted) {
+        el.setAttribute('muted', '');
+      } else {
+        el.removeAttribute('muted');
+      }
+      const playPromise = el.play();
+      if (playPromise !== undefined) {
+        playPromise
+          .then(() => setIsPlaying(true))
+          .catch(() => setIsPlaying(false));
+      }
     }
-  }, [isModalOpen, isUnmuted]);
-
-  // Autoplay continuously in mute when mounted
-  useEffect(() => {
-    const el = videoRef.current;
-    if (!el) return;
-
-    el.muted = !isUnmuted;
-    const playPromise = el.play();
-    if (playPromise !== undefined) {
-      playPromise
-        .then(() => setIsPlaying(true))
-        .catch(() => {
-          setIsPlaying(false);
-        });
-    }
-  }, []);
+  }, [shouldPlay, isModalOpen, isUnmuted]);
 
   const handleTimeUpdate = () => {
     const el = videoRef.current;
@@ -104,10 +105,15 @@ function ReelCard({
     if (!el) return;
 
     if (el.paused) {
-      el.play().then(() => {
-        setIsPlaying(true);
-        if (isUnmuted) onVideoPlayWithSound();
-      }).catch((err) => console.warn('Play error:', err));
+      const playPromise = el.play();
+      if (playPromise !== undefined) {
+        playPromise
+          .then(() => {
+            setIsPlaying(true);
+            if (isUnmuted) onVideoPlayWithSound();
+          })
+          .catch((err) => console.warn('Play error:', err));
+      }
     } else {
       el.pause();
       setIsPlaying(false);
@@ -118,9 +124,24 @@ function ReelCard({
   const handleSoundClick = (e) => {
     e.stopPropagation();
     const el = videoRef.current;
-    if (el && el.paused) {
-      el.play().catch(() => {});
-      setIsPlaying(true);
+    if (el) {
+      if (!isUnmuted) {
+        // Direct synchronous user gesture: ensures Android Chrome unblocks audio
+        el.muted = false;
+        el.removeAttribute('muted');
+        const playPromise = el.play();
+        if (playPromise !== undefined) {
+          playPromise
+            .then(() => {
+              setIsPlaying(true);
+              onVideoPlayWithSound();
+            })
+            .catch((err) => console.warn('Unmute play error:', err));
+        }
+      } else {
+        el.muted = true;
+        el.setAttribute('muted', '');
+      }
     }
     onToggleMute(video.id);
   };
@@ -131,14 +152,15 @@ function ReelCard({
   };
 
   return (
-    <div className={`hvs-reel-card${isUnmuted ? ' is-audio-active' : ''} reveal`}>
+    <div className={`hvs-reel-card${isUnmuted ? ' is-audio-active' : ''}`}>
       {/* 9:16 Portrait Reel Frame */}
       <div className="hvs-reel-frame" onClick={handleTogglePlay}>
         <video
           ref={videoRef}
           src={video.src}
           playsInline
-          autoPlay
+          webkit-playsinline="true"
+          x5-playsinline="true"
           muted={!isUnmuted}
           loop
           preload="metadata"
@@ -255,9 +277,24 @@ function HomeVideoSection({ onNavigateToGallery, onPauseMusic, onResumeMusic }) 
   const [expandedVideo, setExpandedVideo] = useState(null);
   const [showExitConfirm, setShowExitConfirm] = useState(false);
   const [activeReelDot, setActiveReelDot] = useState(0);
+  const [isSectionInView, setIsSectionInView] = useState(false);
+  const [isMobile, setIsMobile] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    return window.innerWidth < 768;
+  });
+
   const modalVideoRef = useRef(null);
   const sectionRef = useRef(null);
   const showcaseRef = useRef(null);
+
+  // Track mobile viewport for single-reel playback vs desktop multi-card preview
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    window.addEventListener('resize', handleResize, { passive: true });
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   const handleShowcaseScroll = useCallback(() => {
     const el = showcaseRef.current;
@@ -381,14 +418,18 @@ function HomeVideoSection({ onNavigateToGallery, onPauseMusic, onResumeMusic }) 
     };
   }, [onResumeMusic]);
 
-  // Auto-pause sound when section leaves viewport
+  // Observer to manage playback: only decode/play videos when section is in viewport
   useEffect(() => {
     const el = sectionRef.current;
-    if (!el || typeof IntersectionObserver === 'undefined') return;
+    if (!el || typeof IntersectionObserver === 'undefined') {
+      setIsSectionInView(true);
+      return;
+    }
 
     const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
+          setIsSectionInView(entry.isIntersecting);
           if (!entry.isIntersecting && !expandedVideo) {
             if (unmutedId) {
               setUnmutedId(null);
@@ -440,21 +481,40 @@ function HomeVideoSection({ onNavigateToGallery, onPauseMusic, onResumeMusic }) 
         {/* 4-Reels Showcase Container */}
         <div
           ref={showcaseRef}
-          className="hvs-reels-showcase"
+          className="hvs-reels-showcase reveal"
           onScroll={handleShowcaseScroll}
         >
-          {REEL_VIDEOS.map((video) => (
-            <ReelCard
-              key={video.id}
-              video={video}
-              isUnmuted={unmutedId === video.id}
-              isModalOpen={!!expandedVideo}
-              onToggleMute={handleToggleMute}
-              onVideoPause={handleVideoPause}
-              onVideoPlayWithSound={handleVideoPlayWithSound}
-              onOpenExpand={handleOpenExpand}
-            />
-          ))}
+          {REEL_VIDEOS.map((video, index) => {
+            // Android-safe playback allocation:
+            // 1. Off-screen: nothing plays (0 decoders used)
+            // 2. Modal open: cards pause
+            // 3. Mobile screen: ONLY active reel plays (1 decoder max)
+            // 4. If any card unmuted: only that unmuted reel plays
+            const isThisCardUnmuted = unmutedId === video.id;
+            const isAnyCardUnmuted = unmutedId !== null;
+            const shouldPlay =
+              isSectionInView &&
+              !expandedVideo &&
+              (isAnyCardUnmuted
+                ? isThisCardUnmuted
+                : isMobile
+                ? index === activeReelDot
+                : true);
+
+            return (
+              <ReelCard
+                key={video.id}
+                video={video}
+                isUnmuted={isThisCardUnmuted}
+                isModalOpen={!!expandedVideo}
+                shouldPlay={shouldPlay}
+                onToggleMute={handleToggleMute}
+                onVideoPause={handleVideoPause}
+                onVideoPlayWithSound={handleVideoPlayWithSound}
+                onOpenExpand={handleOpenExpand}
+              />
+            );
+          })}
         </div>
 
         {/* Mobile carousel indicator dots */}
@@ -568,6 +628,8 @@ function HomeVideoSection({ onNavigateToGallery, onPauseMusic, onResumeMusic }) 
                 src={expandedVideo.src}
                 controls
                 playsInline
+                webkit-playsinline="true"
+                x5-playsinline="true"
                 autoPlay
                 loop
                 onPlay={() => {

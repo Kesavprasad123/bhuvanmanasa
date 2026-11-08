@@ -479,6 +479,8 @@ function GalleryPage({
                       }}
                       src={vid.src}
                       playsInline
+                      webkit-playsinline="true"
+                      x5-playsinline="true"
                       preload="metadata"
                       controls
                       onPlay={() => handleVideoPlay(vid.id)}

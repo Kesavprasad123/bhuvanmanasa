@@ -1082,6 +1082,8 @@
     justify-content: center;
     align-items: center;
     margin: 0 auto;
+    perspective: 1200px;
+    -webkit-perspective: 1200px;
   }
 
   .stage-card {
@@ -1094,14 +1096,12 @@
     box-shadow: 0 15px 35px rgba(45, 25, 20, 0.18);
     transition: transform 0.5s cubic-bezier(0.25, 1, 0.5, 1),
       opacity 0.45s ease,
-      filter 0.45s ease,
       box-shadow 0.45s ease,
       border-color 0.45s ease;
     cursor: pointer;
     user-select: none;
     -webkit-user-select: none;
     transform-style: preserve-3d;
-    perspective: 1200px;
     border: 2px solid transparent;
     will-change: transform, opacity;
   }
@@ -1114,7 +1114,8 @@
     overflow: hidden;
     backface-visibility: hidden;
     -webkit-backface-visibility: hidden;
-    transform-style: flat;
+    transform: translateZ(0);
+    -webkit-transform: translateZ(0);
     transition: transform 0.7s cubic-bezier(0.4, 0.2, 0.2, 1),
       opacity 0.25s ease,
       visibility 0.7s ease;
@@ -1179,7 +1180,6 @@
     transform: translate(-50%, -50%) scale(1.02);
     z-index: 10;
     opacity: 1;
-    filter: none;
     cursor: default;
     border: 2px solid rgba(220, 185, 115, 0.92);
     box-shadow: 0 24px 60px rgba(65, 38, 29, 0.28), 0 0 35px rgba(220, 185, 115, 0.28);
@@ -1191,31 +1191,27 @@
     box-shadow: 0 28px 70px rgba(65, 38, 29, 0.35), 0 0 45px rgba(220, 185, 115, 0.38);
   }
 
-  /* Left Adjacent Card: Planar position, zero rotateY, stable on hover */
+  /* Left Adjacent Card: Planar position, zero rotateY, stable on hover (no filter to preserve 3D on Android) */
   .stage-card.is-prev {
     transform: translate(calc(-50% - 330px), -50%) scale(0.88);
     z-index: 5;
-    opacity: 0.55;
-    filter: brightness(0.85) saturate(0.9);
+    opacity: 0.6;
   }
 
   .stage-card.is-prev:hover {
-    opacity: 0.85;
-    filter: brightness(0.96) saturate(1);
+    opacity: 0.88;
     transform: translate(calc(-50% - 330px), -50%) scale(0.9);
   }
 
-  /* Right Adjacent Card: Planar position, zero rotateY, stable on hover */
+  /* Right Adjacent Card: Planar position, zero rotateY, stable on hover (no filter to preserve 3D on Android) */
   .stage-card.is-next {
     transform: translate(calc(-50% + 330px), -50%) scale(0.88);
     z-index: 5;
-    opacity: 0.55;
-    filter: brightness(0.85) saturate(0.9);
+    opacity: 0.6;
   }
 
   .stage-card.is-next:hover {
-    opacity: 0.85;
-    filter: brightness(0.96) saturate(1);
+    opacity: 0.88;
     transform: translate(calc(-50% + 330px), -50%) scale(0.9);
   }
 
@@ -3485,7 +3481,8 @@
     width: 100%;
     height: 100%;
     cursor: crosshair;
-    touch-action: auto;
+    touch-action: none;
+    border-radius: 20px;
     transition: opacity .85s ease, filter .85s ease;
   }
 
@@ -4029,6 +4026,8 @@
     border: 1.5px solid rgba(189, 138, 66, 0.28);
     box-shadow: 0 12px 36px rgba(65, 38, 29, 0.1);
     overflow: hidden;
+    transform: translateZ(0);
+    -webkit-transform: translateZ(0);
     transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.35s ease, border-color 0.35s ease;
   }
 
@@ -4389,6 +4388,7 @@
       gap: 14px;
       padding: 6px 14px 14px;
       -webkit-overflow-scrolling: touch;
+      touch-action: pan-x pan-y;
       scrollbar-width: none;
       -ms-overflow-style: none;
       margin: 0 -12px;
