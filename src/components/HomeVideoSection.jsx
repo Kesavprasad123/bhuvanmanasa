@@ -8,6 +8,7 @@ const REEL_VIDEOS = [
   {
     id: 'groom-first',
     src: asset('videos/Bhuvan_Manasa_Groom_First_Full_HD.mp4'),
+    poster: asset('assets/pellikoduku.webp'),
     title: "The Groom's Grand Reveal",
     teluguTitle: 'పెళ్ళికొడుకు ఆగమనం',
     subtitle: 'The magnificent first look of Bhuvan as groom',
@@ -17,6 +18,7 @@ const REEL_VIDEOS = [
   {
     id: 'cinema-invitation',
     src: asset('videos/Bhuvan_Manasa_Cinema_Invitation_Clean_Full_HD.mp4'),
+    poster: asset('assets/weddding1.webp'),
     title: 'Cinematic Invitation Film',
     teluguTitle: 'సినీమాటిక్ వెడ్డింగ్ ఆహ్వానం',
     subtitle: 'A grand cinematic film celebrating sacred traditions',
@@ -26,6 +28,7 @@ const REEL_VIDEOS = [
   {
     id: 'events-animation',
     src: asset('videos/Bhuvan_Manasa_Wedding_Events_Clean_Full_HD.mp4'),
+    poster: asset('assets/wedding.webp'),
     title: 'Events Animation Film',
     teluguTitle: 'వివాహ వేడుకల యానిమేషన్',
     subtitle: 'Animated tour of the seven sacred ceremonies',
@@ -35,6 +38,7 @@ const REEL_VIDEOS = [
   {
     id: 'family-invitation',
     src: asset('videos/Teja_Manasa_Telugu_Corrected_HD.mp4'),
+    poster: asset('assets/Card.webp'),
     title: 'Family Invitation & Blessings',
     teluguTitle: 'కుటుంబ ఆశీర్వాదాలు',
     subtitle: 'Heartfelt invitation and blessings from both families',
@@ -48,10 +52,12 @@ function ReelCard({
   isUnmuted,
   isModalOpen,
   shouldPlay,
+  isSectionInView,
   onToggleMute,
   onVideoPause,
   onVideoPlayWithSound,
   onOpenExpand,
+  onSelectReel,
 }) {
   const videoRef = useRef(null);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -69,12 +75,12 @@ function ReelCard({
     el.setAttribute('x5-playsinline', 'true');
   }, []);
 
-  // Declarative playback management: prevents hardware decoder starvation on Android
+  // Declarative playback management: prevents hardware decoder starvation on Android & desktop
   useEffect(() => {
     const el = videoRef.current;
     if (!el) return;
 
-    if (isModalOpen || !shouldPlay) {
+    if (isModalOpen || !shouldPlay || !isSectionInView) {
       el.pause();
       setIsPlaying(false);
     } else {
@@ -91,7 +97,7 @@ function ReelCard({
           .catch(() => setIsPlaying(false));
       }
     }
-  }, [shouldPlay, isModalOpen, isUnmuted]);
+  }, [shouldPlay, isModalOpen, isUnmuted, isSectionInView]);
 
   const handleTimeUpdate = () => {
     const el = videoRef.current;
@@ -101,6 +107,7 @@ function ReelCard({
 
   const handleTogglePlay = (e) => {
     e.stopPropagation();
+    if (onSelectReel) onSelectReel();
     const el = videoRef.current;
     if (!el) return;
 
@@ -123,6 +130,7 @@ function ReelCard({
 
   const handleSoundClick = (e) => {
     e.stopPropagation();
+    if (onSelectReel) onSelectReel();
     const el = videoRef.current;
     if (el) {
       if (!isUnmuted) {
@@ -157,13 +165,14 @@ function ReelCard({
       <div className="hvs-reel-frame" onClick={handleTogglePlay}>
         <video
           ref={videoRef}
-          src={video.src}
+          src={isSectionInView ? video.src : undefined}
+          poster={video.poster}
           playsInline
           webkit-playsinline="true"
           x5-playsinline="true"
           muted={!isUnmuted}
           loop
-          preload="metadata"
+          preload={shouldPlay ? 'auto' : 'none'}
           onTimeUpdate={handleTimeUpdate}
           onPause={() => {
             setIsPlaying(false);
@@ -438,7 +447,7 @@ function HomeVideoSection({ onNavigateToGallery, onPauseMusic, onResumeMusic }) 
           }
         });
       },
-      { threshold: 0.1 }
+      { rootMargin: '250px 0px 250px 0px', threshold: 0.05 }
     );
 
     observer.observe(el);
@@ -485,10 +494,10 @@ function HomeVideoSection({ onNavigateToGallery, onPauseMusic, onResumeMusic }) 
           onScroll={handleShowcaseScroll}
         >
           {REEL_VIDEOS.map((video, index) => {
-            // Android-safe playback allocation:
-            // 1. Off-screen: nothing plays (0 decoders used)
+            // Android & desktop resource-safe playback:
+            // 1. Off-screen: nothing plays (0 decoders used, src not loaded)
             // 2. Modal open: cards pause
-            // 3. Mobile screen: ONLY active reel plays (1 decoder max)
+            // 3. Single active reel plays (1 decoder max across mobile & desktop)
             // 4. If any card unmuted: only that unmuted reel plays
             const isThisCardUnmuted = unmutedId === video.id;
             const isAnyCardUnmuted = unmutedId !== null;
@@ -497,9 +506,7 @@ function HomeVideoSection({ onNavigateToGallery, onPauseMusic, onResumeMusic }) 
               !expandedVideo &&
               (isAnyCardUnmuted
                 ? isThisCardUnmuted
-                : isMobile
-                ? index === activeReelDot
-                : true);
+                : index === activeReelDot);
 
             return (
               <ReelCard
@@ -508,10 +515,12 @@ function HomeVideoSection({ onNavigateToGallery, onPauseMusic, onResumeMusic }) 
                 isUnmuted={isThisCardUnmuted}
                 isModalOpen={!!expandedVideo}
                 shouldPlay={shouldPlay}
+                isSectionInView={isSectionInView}
                 onToggleMute={handleToggleMute}
                 onVideoPause={handleVideoPause}
                 onVideoPlayWithSound={handleVideoPlayWithSound}
                 onOpenExpand={handleOpenExpand}
+                onSelectReel={() => setActiveReelDot(index)}
               />
             );
           })}
@@ -626,12 +635,14 @@ function HomeVideoSection({ onNavigateToGallery, onPauseMusic, onResumeMusic }) 
                 ref={modalVideoRef}
                 key={expandedVideo.id}
                 src={expandedVideo.src}
+                poster={expandedVideo.poster}
                 controls
                 playsInline
                 webkit-playsinline="true"
                 x5-playsinline="true"
                 autoPlay
                 loop
+                preload="auto"
                 onPlay={() => {
                   if (onPauseMusic) onPauseMusic();
                 }}
