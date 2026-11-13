@@ -978,6 +978,86 @@
   border-color: #2f7d51;
 }
 
+/* ---------- Topbar Host Mode Pill ---------- */
+.acc-host-mode-pill {
+  padding: 8px 16px;
+  border-radius: 20px;
+  background: linear-gradient(135deg, #7d2c40, #541d2d);
+  color: #fff8ee;
+  border: 1px solid var(--gold);
+  font-family: "Playfair Display", serif;
+  font-size: 13.5px;
+  letter-spacing: 1px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+}
+
+/* ---------- Guest Read-Only Notice Banner ---------- */
+.acc-readonly-notice {
+  background: var(--paper);
+  border: 1px solid #dcc7a4;
+  border-left: 4px solid var(--gold);
+  border-radius: 18px;
+  padding: 16px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  box-shadow: 0 4px 14px rgba(65, 38, 29, .06);
+}
+
+.acc-readonly-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1 1 280px;
+}
+
+.acc-readonly-lock {
+  font-size: 24px;
+}
+
+.acc-readonly-info strong {
+  font-family: "Playfair Display", serif;
+  font-size: 15.5px;
+  color: var(--wine);
+  display: block;
+  margin-bottom: 2px;
+}
+
+.acc-readonly-info p {
+  margin: 0;
+  font-size: 13.5px;
+  color: var(--sage-dark);
+}
+
+.acc-readonly-btn,
+.acc-login-cta-btn {
+  font-size: 13px;
+  padding: 8px 16px;
+  border-radius: 18px;
+  white-space: nowrap;
+  min-height: 40px;
+}
+
+.acc-host-badge.is-guest-badge {
+  background: rgba(189, 138, 66, .15);
+  color: var(--wine);
+  border: 1px solid rgba(189, 138, 66, .3);
+}
+
+.acc-status-tag.is-clickable {
+  cursor: pointer;
+}
+
+.acc-status-tag.is-clickable:hover {
+  filter: brightness(0.95);
+  transform: scale(1.02);
+}
+
 /* ---------- Tracker Entry Form Card ---------- */
 .acc-tracker-form-card {
   background: var(--paper);
@@ -1567,6 +1647,22 @@ body.dark-theme .acc-room-card {
   background: #25201c;
   border-color: rgba(189, 138, 66, .3);
   box-shadow: 0 10px 30px rgba(0, 0, 0, .4);
+}
+
+body.dark-theme .acc-readonly-notice {
+  background: #25201c;
+  border-color: rgba(189, 138, 66, .3);
+  border-left-color: #e9cf9d;
+}
+
+body.dark-theme .acc-readonly-info strong {
+  color: #e9cf9d;
+}
+
+body.dark-theme .acc-host-badge.is-guest-badge {
+  background: rgba(189, 138, 66, .2);
+  color: #e9cf9d;
+  border-color: rgba(189, 138, 66, .35);
 }
 
 body.dark-theme .acc-form-title,

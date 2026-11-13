@@ -224,13 +224,11 @@ function Accommodation({
     [onBackToInvitation, audioRef]
   );
 
-  // Host session & views
+  // Host session
   const [showLogin, setShowLogin] = useState(false);
   const [hostLoggedIn, setHostLoggedIn] = useState(isHostLoggedIn);
-  const [dashboardOpen, setDashboardOpen] = useState(false);
 
-  const viewKey = dashboardOpen ? 'dashboard' : 'overview';
-  useScrollReveal(viewKey);
+  useScrollReveal('accommodation');
 
   useEffect(() => {
     document.body.classList.remove('locked');
@@ -271,18 +269,15 @@ function Accommodation({
   const handleLoginSuccess = () => {
     setShowLogin(false);
     setHostLoggedIn(true);
-    setDashboardOpen(true);
   };
 
   const handleLogout = async () => {
     await logoutHost();
     setHostLoggedIn(false);
-    setDashboardOpen(false);
   };
 
   const handleSessionExpired = () => {
     setHostLoggedIn(false);
-    setDashboardOpen(false);
     setShowLogin(true);
   };
 
@@ -315,45 +310,28 @@ function Accommodation({
             </button>
           )}
 
-          {bookingConfigured && !hostLoggedIn && (
+          {!hostLoggedIn ? (
             <button
               type="button"
               className="acc-host-link"
               onClick={() => setShowLogin(true)}
-              title="Host access for room allocation tracking"
+              title="Host access to allocate and edit rooms"
             >
               🔒 Host Login
             </button>
-          )}
-
-          {hostLoggedIn && !dashboardOpen && (
-            <button
-              type="button"
-              className="acc-host-link is-active-mode"
-              onClick={() => setDashboardOpen(true)}
-            >
-              👑 Host Tracker
-            </button>
-          )}
-
-          {hostLoggedIn && dashboardOpen && (
-            <button
-              type="button"
-              className="acc-host-link"
-              onClick={() => setDashboardOpen(false)}
-            >
-              👁️ Guest View
-            </button>
-          )}
-
-          {hostLoggedIn && (
-            <button
-              type="button"
-              className="acc-host-link is-logout"
-              onClick={handleLogout}
-            >
-              Logout
-            </button>
+          ) : (
+            <>
+              <span className="acc-host-mode-pill">
+                👑 Host Mode (Edit Access)
+              </span>
+              <button
+                type="button"
+                className="acc-host-link is-logout"
+                onClick={handleLogout}
+              >
+                Logout
+              </button>
+            </>
           )}
 
           <button
@@ -379,88 +357,69 @@ function Accommodation({
           <Ornament />
         </section>
 
-        {/* HOST TRACKER DASHBOARD VIEW */}
-        {dashboardOpen && hostLoggedIn ? (
-          <HostDashboard
-            onExit={() => setDashboardOpen(false)}
-            onLogout={handleLogout}
-            onSessionExpired={handleSessionExpired}
-          />
-        ) : (
-          /* PUBLIC GUEST VIEW */
-          <section className="acc-public-view">
-            {/* Both Stay Locations Displayed Clearly */}
-            <div className="acc-location-selector reveal">
-              <span className="acc-selector-title">Accommodation Arranged at 2 Locations:</span>
-            </div>
+        {/* 2 Locations Showcase Cards (Always visible to all guests) */}
+        <section className="acc-public-view">
+          <div className="acc-location-selector reveal">
+            <span className="acc-selector-title">Accommodation Arranged at 2 Locations:</span>
+          </div>
 
-            <div className="acc-venues-showcase reveal">
-              {PROPERTIES.map((property, idx) => (
-                <div
-                  key={property.id}
-                  className="acc-showcase-card is-public-card"
-                >
-                  <div className="acc-showcase-art">
-                    <StayArt variant={property.id} uid={`showcase-${property.id}`} />
-                  </div>
-
-                  <div className="acc-showcase-head">
-                    <span className="acc-showcase-num-badge">
-                      {idx === 0 ? '1. Family & Guests Stay' : '2. Wedding Hall Stay'}
-                    </span>
-                    <h2 className="acc-showcase-title">{property.name}</h2>
-                    <p className="acc-showcase-blurb">{property.blurb}</p>
-                    {property.address && (
-                      <p className="acc-showcase-address">📍 {property.address}</p>
-                    )}
-                  </div>
-
-                  <div className="acc-showcase-timing">
-                    {property.flexibleTimings ? (
-                      <span>
-                        🕒 <strong>Flexible Timings</strong> · {property.dateLabel}
-                      </span>
-                    ) : (
-                      <span>
-                        🕒 <strong>{property.timingNote}</strong>
-                      </span>
-                    )}
-                  </div>
-
-                  <div className="acc-showcase-actions">
-                    {property.mapUrl && (
-                      <a
-                        className="gold-button acc-showcase-map-link"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        href={property.mapUrl}
-                      >
-                        📍 Open in Google Maps
-                      </a>
-                    )}
-                  </div>
+          <div className="acc-venues-showcase reveal">
+            {PROPERTIES.map((property, idx) => (
+              <div
+                key={property.id}
+                className="acc-showcase-card is-public-card"
+              >
+                <div className="acc-showcase-art">
+                  <StayArt variant={property.id} uid={`showcase-${property.id}`} />
                 </div>
-              ))}
-            </div>
 
-            {/* Guest Assistance & Host Login Prompt */}
-            <div className="acc-guest-footer-note reveal">
-              <p>
-                Comfortable stay arranged for our beloved family and wedding guests at both locations.
-                For room assistance, arrival coordination, or queries, please contact the wedding coordinators or host.
-              </p>
-              {!hostLoggedIn && (
-                <button
-                  type="button"
-                  className="acc-host-login-prompt"
-                  onClick={() => setShowLogin(true)}
-                >
-                  👑 Are you the wedding host? Tap here to open the Room Allocation Tracker →
-                </button>
-              )}
-            </div>
-          </section>
-        )}
+                <div className="acc-showcase-head">
+                  <span className="acc-showcase-num-badge">
+                    {idx === 0 ? '1. Family & Guests Stay' : '2. Wedding Hall Stay'}
+                  </span>
+                  <h2 className="acc-showcase-title">{property.name}</h2>
+                  <p className="acc-showcase-blurb">{property.blurb}</p>
+                  {property.address && (
+                    <p className="acc-showcase-address">📍 {property.address}</p>
+                  )}
+                </div>
+
+                <div className="acc-showcase-timing">
+                  {property.flexibleTimings ? (
+                    <span>
+                      🕒 <strong>Flexible Timings</strong> · {property.dateLabel}
+                    </span>
+                  ) : (
+                    <span>
+                      🕒 <strong>{property.timingNote}</strong>
+                    </span>
+                  )}
+                </div>
+
+                <div className="acc-showcase-actions">
+                  {property.mapUrl && (
+                    <a
+                      className="gold-button acc-showcase-map-link"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      href={property.mapUrl}
+                    >
+                      📍 Open in Google Maps
+                    </a>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* ROOM ALLOCATION TRACKER: Read-Only for Guests, Full Edit Access for Host */}
+        <HostDashboard
+          isHost={hostLoggedIn}
+          onOpenLogin={() => setShowLogin(true)}
+          onLogout={handleLogout}
+          onSessionExpired={handleSessionExpired}
+        />
       </main>
 
       {/* Host Login Dialog */}

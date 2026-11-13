@@ -23,6 +23,8 @@ function formatDateShort(iso) {
 }
 
 export default function HostDashboard({
+  isHost = false,
+  onOpenLogin,
   onExit,
   onLogout,
   onSessionExpired,
@@ -178,6 +180,7 @@ export default function HostDashboard({
 
   // Toggle Entry status (Occupied <-> Vacant)
   const handleToggleStatus = async (id, currentStatus, room) => {
+    if (!isHost) return;
     try {
       await toggleEntryStatus(id);
       loadEntries();
@@ -190,6 +193,7 @@ export default function HostDashboard({
 
   // Delete Entry
   const handleDeleteEntry = async (id) => {
+    if (!isHost) return;
     try {
       await deleteTrackerEntry(id);
       loadEntries();
@@ -234,38 +238,63 @@ export default function HostDashboard({
       <div className="acc-dash-head reveal">
         <div className="acc-dash-title-block">
           <div className="acc-host-badge-row">
-            <span className="acc-host-badge">👑 HOST ROOM TRACKER</span>
-            <span className="acc-live-pulse-badge">● Live Sync</span>
+            {isHost ? (
+              <span className="acc-host-badge">👑 HOST MODE · EDIT ACCESS</span>
+            ) : (
+              <span className="acc-host-badge is-guest-badge">👁️ GUEST VIEW · READ-ONLY</span>
+            )}
+            <span className="acc-live-pulse-badge">● Live Updates</span>
           </div>
-          <h2 id="acc-dash-title">Accommodation Allocation Tracker</h2>
+          <h2 id="acc-dash-title">Room Allocation Tracker</h2>
           <p className="acc-dash-sub">
-            Reference tracker for guest room assignments across Krishna IN and SVPC Convention Hall 1.
+            {isHost
+              ? 'Manage room assignments, guest contact details, and check-in status.'
+              : 'View occupied rooms and guest allocations across Krishna IN and SVPC Convention Hall 1.'}
           </p>
         </div>
 
         <div className="acc-dash-head-actions">
-          <button
-            type="button"
-            className="acc-whatsapp-button"
-            onClick={handleCopyWhatsApp}
-            title="Copy WhatsApp-formatted summary to paste into family groups"
-          >
-            📋 Copy WhatsApp Summary
-          </button>
-          <button
-            type="button"
-            className="acc-ghost-button"
-            onClick={() => setShowChangePin(true)}
-            title="Change your secret 4-digit PIN code"
-          >
-            🔑 PIN Code
-          </button>
-          <button type="button" className="acc-ghost-button" onClick={onExit}>
-            ← Guest View
-          </button>
-          <button type="button" className="acc-ghost-button is-logout" onClick={onLogout}>
-            Logout
-          </button>
+          {isHost ? (
+            <>
+              <button
+                type="button"
+                className="acc-whatsapp-button"
+                onClick={handleCopyWhatsApp}
+                title="Copy WhatsApp-formatted summary to paste into family groups"
+              >
+                📋 Copy WhatsApp Summary
+              </button>
+              <button
+                type="button"
+                className="acc-ghost-button"
+                onClick={() => setShowChangePin(true)}
+                title="Change your secret 4-digit PIN code"
+              >
+                🔑 PIN Code
+              </button>
+              {onExit && (
+                <button type="button" className="acc-ghost-button" onClick={onExit}>
+                  👁️ Guest View
+                </button>
+              )}
+              {onLogout && (
+                <button type="button" className="acc-ghost-button is-logout" onClick={onLogout}>
+                  Logout
+                </button>
+              )}
+            </>
+          ) : (
+            onOpenLogin && (
+              <button
+                type="button"
+                className="gold-button acc-login-cta-btn"
+                onClick={onOpenLogin}
+                title="Log in with passcode 9229 to allocate or edit rooms"
+              >
+                🔒 Host Login (Edit Access)
+              </button>
+            )
+          )}
         </div>
       </div>
 
@@ -282,7 +311,7 @@ export default function HostDashboard({
             {stats.totalOccupied} <small>Occupied</small>
           </span>
           <span className="acc-metric-note">
-            {stats.totalVacant} vacated · {stats.totalEntries} total tracked
+            {stats.totalVacant} vacant · {stats.totalEntries} total tracked
           </span>
         </div>
 
@@ -317,188 +346,214 @@ export default function HostDashboard({
         </div>
       </div>
 
-      {/* CREATE / EDIT ENTRY FORM (As requested by user) */}
-      <div id="acc-tracker-form" className="acc-tracker-form-card reveal">
-        <div className="acc-form-header">
-          <div>
-            <h3 className="acc-form-title">
-              {editingId ? '✏️ Edit Room Entry' : '➕ Create Entry for Room Allocation'}
-            </h3>
-            <p className="acc-form-subtitle">
-              Enter guest information upon arrival to track which room is assigned.
-            </p>
-          </div>
-          {editingId && (
-            <button
-              type="button"
-              className="acc-ghost-button"
-              onClick={resetForm}
-            >
-              Cancel Edit
-            </button>
-          )}
-        </div>
-
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            handleSubmitForm('occupied');
-          }}
-          className="acc-tracker-form"
-        >
-          {/* Stay Location Radio Switcher */}
-          <div className="acc-field acc-location-field">
-            <label className="acc-label">Select Stay Location:</label>
-            <div className="acc-location-radios" role="radiogroup">
-              {PROPERTIES.map((prop) => (
-                <button
-                  key={prop.id}
-                  type="button"
-                  role="radio"
-                  aria-checked={formPropertyId === prop.id}
-                  className={`acc-location-choice-btn${formPropertyId === prop.id ? ' is-selected' : ''}`}
-                  onClick={() => setFormPropertyId(prop.id)}
-                >
-                  <span className="acc-choice-radio" />
-                  <span className="acc-choice-text">{prop.name}</span>
-                </button>
-              ))}
+      {/* CREATE / EDIT ENTRY FORM (Host Edit Access Only) */}
+      {isHost ? (
+        <div id="acc-tracker-form" className="acc-tracker-form-card reveal">
+          <div className="acc-form-header">
+            <div>
+              <h3 className="acc-form-title">
+                {editingId ? '✏️ Edit Room Entry' : '➕ Create Entry for Room Allocation'}
+              </h3>
+              <p className="acc-form-subtitle">
+                Enter guest information upon arrival to track which room is assigned.
+              </p>
             </div>
-            <div className="acc-timing-hint">
-              {selectedFormProperty.flexibleTimings ? (
-                <span>🕒 <strong>Krishna IN:</strong> Flexible check-in / check-out on 12th Dec 2026</span>
-              ) : (
-                <span>🕒 <strong>SVPC Hall 1:</strong> 12 Dec 2026, 9:00 AM → 13 Dec 2026, 7:00 AM (Fixed)</span>
-              )}
-            </div>
-          </div>
-
-          {/* Form Input Fields Grid */}
-          <div className="acc-form-row">
-            {/* Guest Name */}
-            <div className="acc-field">
-              <label htmlFor="tr-guest-name" className="acc-label">
-                Guest Name : <span className="acc-required">*</span>
-              </label>
-              <input
-                id="tr-guest-name"
-                type="text"
-                autoComplete="off"
-                placeholder="e.g. Ramesh family, Suresh Rao"
-                value={guestName}
-                onChange={(e) => setGuestName(e.target.value)}
-                required
-              />
-            </div>
-
-            {/* Guest Number (Phone) */}
-            <div className="acc-field">
-              <label htmlFor="tr-guest-number" className="acc-label">
-                Guest Number : <small>(Phone / WhatsApp)</small>
-              </label>
-              <input
-                id="tr-guest-number"
-                type="tel"
-                autoComplete="off"
-                placeholder="e.g. 9848012345"
-                value={guestPhone}
-                onChange={(e) => setGuestPhone(e.target.value)}
-              />
-            </div>
-
-            {/* Room Num Assigned */}
-            <div className="acc-field">
-              <label htmlFor="tr-room-num" className="acc-label">
-                Room Num Assigned : <span className="acc-required">*</span>
-              </label>
-              <input
-                id="tr-room-num"
-                type="text"
-                autoComplete="off"
-                placeholder="e.g. 101, 204, Room 4"
-                value={roomNumber}
-                onChange={(e) => setRoomNumber(e.target.value)}
-                required
-              />
-            </div>
-          </div>
-
-          {/* Calendar (Dates) */}
-          <div className="acc-form-row acc-dates-row">
-            <div className="acc-field">
-              <label htmlFor="tr-checkin" className="acc-label">
-                Calendar Check-in :
-              </label>
-              <input
-                id="tr-checkin"
-                type="date"
-                value={checkIn}
-                onChange={(e) => setCheckIn(e.target.value)}
-              />
-            </div>
-
-            <div className="acc-field">
-              <label htmlFor="tr-checkout" className="acc-label">
-                Calendar Check-out :
-              </label>
-              <input
-                id="tr-checkout"
-                type="date"
-                value={checkOut}
-                onChange={(e) => setCheckOut(e.target.value)}
-              />
-            </div>
-          </div>
-
-          {formError && (
-            <p className="acc-form-error" role="alert">
-              ⚠️ {formError}
-            </p>
-          )}
-
-          {/* Action Buttons: Allocate & Vacant Button */}
-          <div className="acc-form-actions-row">
-            <button
-              type="submit"
-              className="gold-button acc-allocate-btn"
-              disabled={submitting}
-              title="Save entry and mark as Occupied"
-            >
-              🔴 {editingId ? 'Update & Allocate' : 'Allocate Room'}
-            </button>
-
-            <button
-              type="button"
-              className="acc-vacant-btn"
-              disabled={submitting}
-              onClick={() => handleSubmitForm('vacant')}
-              title="Save or mark entry as Vacant / Available"
-            >
-              🟢 Mark as Vacant
-            </button>
-
             {editingId && (
               <button
                 type="button"
                 className="acc-ghost-button"
                 onClick={resetForm}
               >
-                Clear
+                Cancel Edit
               </button>
             )}
           </div>
-        </form>
-      </div>
+
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              handleSubmitForm('occupied');
+            }}
+            className="acc-tracker-form"
+          >
+            {/* Stay Location Radio Switcher */}
+            <div className="acc-field acc-location-field">
+              <label className="acc-label">Select Stay Location:</label>
+              <div className="acc-location-radios" role="radiogroup">
+                {PROPERTIES.map((prop) => (
+                  <button
+                    key={prop.id}
+                    type="button"
+                    role="radio"
+                    aria-checked={formPropertyId === prop.id}
+                    className={`acc-location-choice-btn${formPropertyId === prop.id ? ' is-selected' : ''}`}
+                    onClick={() => setFormPropertyId(prop.id)}
+                  >
+                    <span className="acc-choice-radio" />
+                    <span className="acc-choice-text">{prop.name}</span>
+                  </button>
+                ))}
+              </div>
+              <div className="acc-timing-hint">
+                {selectedFormProperty.flexibleTimings ? (
+                  <span>🕒 <strong>Krishna IN:</strong> Flexible check-in / check-out on 12th Dec 2026</span>
+                ) : (
+                  <span>🕒 <strong>SVPC Hall 1:</strong> 12 Dec 2026, 9:00 AM → 13 Dec 2026, 7:00 AM (Fixed)</span>
+                )}
+              </div>
+            </div>
+
+            {/* Form Input Fields Grid */}
+            <div className="acc-form-row">
+              {/* Guest Name */}
+              <div className="acc-field">
+                <label htmlFor="tr-guest-name" className="acc-label">
+                  Guest Name : <span className="acc-required">*</span>
+                </label>
+                <input
+                  id="tr-guest-name"
+                  type="text"
+                  autoComplete="off"
+                  placeholder="e.g. Ramesh family, Suresh Rao"
+                  value={guestName}
+                  onChange={(e) => setGuestName(e.target.value)}
+                  required
+                />
+              </div>
+
+              {/* Guest Number (Phone) */}
+              <div className="acc-field">
+                <label htmlFor="tr-guest-number" className="acc-label">
+                  Guest Number : <small>(Phone / WhatsApp)</small>
+                </label>
+                <input
+                  id="tr-guest-number"
+                  type="tel"
+                  autoComplete="off"
+                  placeholder="e.g. 9848012345"
+                  value={guestPhone}
+                  onChange={(e) => setGuestPhone(e.target.value)}
+                />
+              </div>
+
+              {/* Room Num Assigned */}
+              <div className="acc-field">
+                <label htmlFor="tr-room-num" className="acc-label">
+                  Room Num Assigned : <span className="acc-required">*</span>
+                </label>
+                <input
+                  id="tr-room-num"
+                  type="text"
+                  autoComplete="off"
+                  placeholder="e.g. 101, 204, Room 4"
+                  value={roomNumber}
+                  onChange={(e) => setRoomNumber(e.target.value)}
+                  required
+                />
+              </div>
+            </div>
+
+            {/* Calendar (Dates) */}
+            <div className="acc-form-row acc-dates-row">
+              <div className="acc-field">
+                <label htmlFor="tr-checkin" className="acc-label">
+                  Calendar Check-in :
+                </label>
+                <input
+                  id="tr-checkin"
+                  type="date"
+                  value={checkIn}
+                  onChange={(e) => setCheckIn(e.target.value)}
+                />
+              </div>
+
+              <div className="acc-field">
+                <label htmlFor="tr-checkout" className="acc-label">
+                  Calendar Check-out :
+                </label>
+                <input
+                  id="tr-checkout"
+                  type="date"
+                  value={checkOut}
+                  onChange={(e) => setCheckOut(e.target.value)}
+                />
+              </div>
+            </div>
+
+            {formError && (
+              <p className="acc-form-error" role="alert">
+                ⚠️ {formError}
+              </p>
+            )}
+
+            {/* Action Buttons: Allocate & Vacant Button */}
+            <div className="acc-form-actions-row">
+              <button
+                type="submit"
+                className="gold-button acc-allocate-btn"
+                disabled={submitting}
+                title="Save entry and mark as Occupied"
+              >
+                🔴 {editingId ? 'Update & Allocate' : 'Allocate Room'}
+              </button>
+
+              <button
+                type="button"
+                className="acc-vacant-btn"
+                disabled={submitting}
+                onClick={() => handleSubmitForm('vacant')}
+                title="Save or mark entry as Vacant / Available"
+              >
+                🟢 Mark as Vacant
+              </button>
+
+              {editingId && (
+                <button
+                  type="button"
+                  className="acc-ghost-button"
+                  onClick={resetForm}
+                >
+                  Clear
+                </button>
+              )}
+            </div>
+          </form>
+        </div>
+      ) : (
+        /* Read-Only Notice for Guests */
+        <div className="acc-readonly-notice reveal">
+          <div className="acc-readonly-info">
+            <span className="acc-readonly-lock">🔒</span>
+            <div>
+              <strong>Guest View (Read-Only)</strong>
+              <p>
+                Room allocations are displayed below for your reference. Wedding host login is required to allocate or modify rooms.
+              </p>
+            </div>
+          </div>
+          {onOpenLogin && (
+            <button
+              type="button"
+              className="gold-button acc-readonly-btn"
+              onClick={onOpenLogin}
+            >
+              Host Login (Passcode: 9229) →
+            </button>
+          )}
+        </div>
+      )}
 
       {/* TRACKER ENTRIES LIST / TABLE */}
       <div className="acc-tracker-section reveal">
         <div className="acc-tracker-header">
           <div>
             <h3 className="acc-tracker-title">
-              Live Room Allocation Tracker ({filteredEntries.length})
+              Room Allocation Tracker ({filteredEntries.length})
             </h3>
             <p className="acc-tracker-subtitle">
-              Reference record of occupied and vacated rooms.
+              {isHost
+                ? 'Reference record of occupied and vacated rooms with full edit controls.'
+                : 'Live list of occupied rooms for guest reference.'}
             </p>
           </div>
 
@@ -534,7 +589,11 @@ export default function HostDashboard({
           <input
             type="search"
             autoComplete="off"
-            placeholder="Search by guest name, phone number, or room number..."
+            placeholder={
+              isHost
+                ? 'Search by guest name, phone number, or room number...'
+                : 'Search by guest name or room number...'
+            }
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
@@ -554,11 +613,13 @@ export default function HostDashboard({
         {filteredEntries.length === 0 ? (
           <div className="acc-empty-tracker">
             <span className="acc-empty-icon" aria-hidden="true">📭</span>
-            <h4>No room entries found</h4>
+            <h4>No room entries recorded yet</h4>
             <p>
               {searchQuery
                 ? `No entries match "${searchQuery}".`
-                : 'No room allocations recorded yet. Use the Create Entry form above to log guests as they arrive.'}
+                : isHost
+                  ? 'No room allocations recorded yet. Use the Create Entry form above to log guests as they arrive.'
+                  : 'Room allocations have not been recorded yet. Please check back shortly or contact the host.'}
             </p>
           </div>
         ) : (
@@ -584,15 +645,18 @@ export default function HostDashboard({
                         {prop.name}
                       </span>
 
-                      <button
-                        type="button"
-                        className={`acc-status-tag${isOccupied ? ' is-occupied' : ' is-vacant'}`}
-                        onClick={() => handleToggleStatus(entry.id, entry.status, entry.roomNumber)}
-                        title="Click to toggle status between Occupied and Vacant"
+                      <span
+                        className={`acc-status-tag${isOccupied ? ' is-occupied' : ' is-vacant'}${isHost ? ' is-clickable' : ''}`}
+                        onClick={() => {
+                          if (isHost) {
+                            handleToggleStatus(entry.id, entry.status, entry.roomNumber);
+                          }
+                        }}
+                        title={isHost ? 'Click to toggle status between Occupied and Vacant' : undefined}
                       >
                         <span className="acc-status-dot" />
                         <span>{isOccupied ? 'Occupied' : 'Vacant'}</span>
-                      </button>
+                      </span>
                     </div>
 
                     {/* Guest Name & Number */}
@@ -604,7 +668,8 @@ export default function HostDashboard({
                         </strong>
                       </div>
 
-                      {entry.guestPhone && (
+                      {/* Phone visible with quick actions for Host */}
+                      {isHost && entry.guestPhone && (
                         <div className="acc-guest-phone-row">
                           <span className="acc-detail-label">Phone:</span>
                           <span className="acc-phone-val">{entry.guestPhone}</span>
@@ -641,33 +706,37 @@ export default function HostDashboard({
                     </div>
                   </div>
 
-                  {/* Actions */}
-                  <div className="acc-card-actions">
-                    <button
-                      type="button"
-                      className={`acc-card-btn${isOccupied ? ' is-vacate' : ' is-allocate'}`}
-                      onClick={() => handleToggleStatus(entry.id, entry.status, entry.roomNumber)}
-                    >
-                      {isOccupied ? 'Mark Vacant' : 'Mark Occupied'}
-                    </button>
+                  {/* Actions for Host Only */}
+                  {isHost && (
+                    <div className="acc-card-actions">
+                      <button
+                        type="button"
+                        className={`acc-card-btn${isOccupied ? ' is-vacate' : ' is-allocate'}`}
+                        onClick={() => handleToggleStatus(entry.id, entry.status, entry.roomNumber)}
+                        title={isOccupied ? 'Mark as Vacant' : 'Mark as Occupied'}
+                      >
+                        {isOccupied ? 'Mark Vacant' : 'Mark Occupied'}
+                      </button>
 
-                    <button
-                      type="button"
-                      className="acc-card-btn is-edit"
-                      onClick={() => handleStartEdit(entry)}
-                    >
-                      ✏️ Edit
-                    </button>
+                      <button
+                        type="button"
+                        className="acc-card-btn is-edit"
+                        onClick={() => handleStartEdit(entry)}
+                        title="Edit entry"
+                      >
+                        ✏️ Edit
+                      </button>
 
-                    <button
-                      type="button"
-                      className="acc-card-btn is-delete"
-                      onClick={() => setDeleteConfirmId(entry.id)}
-                      title="Remove entry"
-                    >
-                      🗑️
-                    </button>
-                  </div>
+                      <button
+                        type="button"
+                        className="acc-card-btn is-delete"
+                        onClick={() => setDeleteConfirmId(entry.id)}
+                        title="Remove entry"
+                      >
+                        🗑️
+                      </button>
+                    </div>
+                  )}
                 </div>
               );
             })}
