@@ -1,4 +1,11 @@
-function Hero() {
+function Hero({ onExplore }) {
+  const handleClick = (e) => {
+    if (onExplore) {
+      e.preventDefault();
+      onExplore();
+    }
+  };
+
   return (
     <section id="home" className="hero">
       <div className="hero-overlay"></div>
@@ -16,7 +23,12 @@ function Hero() {
           <i>&hearts;</i>
           <span>Manasa</span>
         </h1>
-        <a href="#story" className="scroll-button">
+        <a
+          href="#countdown"
+          onClick={handleClick}
+          className="scroll-button"
+          style={{ touchAction: 'manipulation' }}
+        >
           Explore our celebration ↓
         </a>
       </div>
