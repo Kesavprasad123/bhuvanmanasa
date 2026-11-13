@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { CHECK_IN_TIME, CHECK_OUT_TIME, PROPERTIES, getProperty } from '../data/accommodation';
+import { PROPERTIES, getProperty } from '../data/accommodation';
 import {
   bookingConfigured,
   fetchAvailability,
@@ -464,92 +464,75 @@ function Accommodation({
         ) : (
           /* PUBLIC GUEST VIEW */
           <section className="acc-public-view">
-            {/* Location Switcher Tabs */}
+            {/* Both Stay Locations Displayed Clearly */}
             <div className="acc-location-selector reveal">
-              <span className="acc-selector-title">Select Stay Location:</span>
-              <div className="acc-location-tabs" role="tablist">
-                {PROPERTIES.map((property) => {
-                  const counts = countsFor(property);
-                  const isSelected = selectedProperty.id === property.id;
-                  return (
-                    <button
-                      key={property.id}
-                      type="button"
-                      role="tab"
-                      aria-selected={isSelected}
-                      className={`acc-location-tab${isSelected ? ' is-selected' : ''}`}
-                      onClick={() => handleSelectLocation(property.id)}
-                    >
-                      <span className="acc-loc-tab-name">{property.name}</span>
-                      <span className="acc-loc-tab-meta">
-                        {counts.available !== null ? `${counts.available} available` : '8 rooms'}
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
+              <span className="acc-selector-title">Accommodation Arranged at 2 Locations:</span>
             </div>
 
-            {/* Selected Property Detail Card */}
-            <div className="acc-venue-card reveal">
-              <div className="acc-venue-art">
-                <StayArt variant={selectedProperty.id} uid="guest-view" />
-              </div>
+            <div className="acc-venues-showcase reveal">
+              {PROPERTIES.map((property, idx) => {
+                const counts = countsFor(property);
+                const isSelected = selectedProperty.id === property.id;
+                return (
+                  <div
+                    key={property.id}
+                    className={`acc-showcase-card${isSelected ? ' is-active-venue' : ''}`}
+                    onClick={() => handleSelectLocation(property.id)}
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        handleSelectLocation(property.id);
+                      }
+                    }}
+                  >
+                    <div className="acc-showcase-art">
+                      <StayArt variant={property.id} uid={`showcase-${property.id}`} />
+                    </div>
 
-              <div className="acc-venue-content">
-                <div className="acc-venue-header">
-                  <span className="acc-card-eyebrow">{selectedProperty.tagline}</span>
-                  <h2 className="acc-venue-title">{selectedProperty.name}</h2>
-                  <p className="acc-venue-blurb">{selectedProperty.blurb}</p>
-                  {selectedProperty.address && (
-                    <p className="acc-venue-address">📍 {selectedProperty.address}</p>
-                  )}
-                </div>
+                    <div className="acc-showcase-head">
+                      <span className="acc-showcase-num-badge">
+                        {idx === 0 ? '1. Family & Guests Stay' : '2. Wedding Hall Stay'}
+                      </span>
+                      <h2 className="acc-showcase-title">{property.name}</h2>
+                      <p className="acc-showcase-blurb">{property.blurb}</p>
+                      {property.address && (
+                        <p className="acc-showcase-address">📍 {property.address}</p>
+                      )}
+                    </div>
 
-                {/* Timings & Map Action */}
-                <div className="acc-venue-actions-row">
-                  <div className="acc-timings-badge-wrap">
-                    <span className="acc-time-badge">
-                      🕒 Check-in: <strong>{CHECK_IN_TIME}</strong>
-                    </span>
-                    <span className="acc-time-badge">
-                      🕚 Check-out: <strong>{CHECK_OUT_TIME}</strong>
-                    </span>
+                    <div className="acc-showcase-timing">
+                      {property.flexibleTimings ? (
+                        <span>
+                          🕒 <strong>Flexible Timings</strong> · {property.dateLabel}
+                        </span>
+                      ) : (
+                        <span>
+                          🕒 <strong>{property.timingNote}</strong>
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="acc-showcase-actions">
+                      {property.mapUrl && (
+                        <a
+                          className="gold-button acc-showcase-map-link"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          href={property.mapUrl}
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          📍 Google Maps
+                        </a>
+                      )}
+                      <span className="acc-showcase-select-pill">
+                        {isSelected ? `✓ Viewing Rooms (${counts.available ?? property.rooms.length} available)` : 'Tap to View Rooms →'}
+                      </span>
+                    </div>
                   </div>
-
-                  {selectedProperty.mapUrl && (
-                    <a
-                      className="gold-button acc-map-btn"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      href={selectedProperty.mapUrl}
-                    >
-                      📍 Open in Google Maps
-                    </a>
-                  )}
-                </div>
-
-                {/* Live Count Badges */}
-                {(() => {
-                  const counts = countsFor(selectedProperty);
-                  return (
-                    <ul className="acc-chips">
-                      <li className="acc-chip">
-                        <span className="acc-chip-label">Total Rooms</span>
-                        <strong>{counts.total}</strong>
-                      </li>
-                      <li className="acc-chip is-booked">
-                        <span className="acc-chip-label">Occupied</span>
-                        <strong>{counts.booked === null ? '—' : counts.booked}</strong>
-                      </li>
-                      <li className="acc-chip is-free">
-                        <span className="acc-chip-label">Available</span>
-                        <strong>{counts.available === null ? '—' : counts.available}</strong>
-                      </li>
-                    </ul>
-                  );
-                })()}
-              </div>
+                );
+              })}
             </div>
 
             {/* Room Availability Grid (Privacy-Preserving) */}
@@ -581,8 +564,17 @@ function Accommodation({
                         />
                       </div>
                       <div className="acc-tile-timings">
-                        <span>Check-in {CHECK_IN_TIME}</span>
-                        <span>Check-out {CHECK_OUT_TIME}</span>
+                        {selectedProperty.flexibleTimings ? (
+                          <>
+                            <span>12 Dec 2026</span>
+                            <span>Flexible Timings</span>
+                          </>
+                        ) : (
+                          <>
+                            <span>In: 12 Dec, 9:00 AM</span>
+                            <span>Out: 13 Dec, 7:00 AM</span>
+                          </>
+                        )}
                       </div>
                     </div>
                   );

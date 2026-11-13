@@ -387,9 +387,8 @@ export function RoomAllocationDialog({
   if (!open) return null;
 
   const datePresets = [
-    { label: 'Dec 12 - 13 (Wedding Day)', in: '2026-12-12', out: '2026-12-13' },
-    { label: 'Dec 11 - 13 (2 Nights)', in: '2026-12-11', out: '2026-12-13' },
-    { label: 'Dec 10 - 13 (Full Stay - 3 Nights)', in: '2026-12-10', out: '2026-12-13' },
+    { label: 'Dec 12 - 13 (Wedding Stay)', in: '2026-12-12', out: '2026-12-13' },
+    { label: 'Dec 11 - 13 (Early Arrival)', in: '2026-12-11', out: '2026-12-13' },
     { label: 'Dec 12 - 14 (Extended)', in: '2026-12-12', out: '2026-12-14' },
   ];
 
@@ -552,14 +551,22 @@ export function RoomAllocationDialog({
             </div>
           </div>
 
-          {/* Static Timings Box */}
+          {/* Timings Information Box */}
           <div className="acc-static-timings-box">
-            <span className="acc-timings-badge">
-              🕒 Check-in Time: <strong>{CHECK_IN_TIME}</strong> (Fixed)
-            </span>
-            <span className="acc-timings-badge">
-              🕚 Check-out Time: <strong>{CHECK_OUT_TIME}</strong> (Fixed)
-            </span>
+            {property && property.flexibleTimings ? (
+              <span className="acc-timings-badge">
+                🕒 <strong>Flexible Timings</strong> · 12 Dec 2026 (Based on guest arrival)
+              </span>
+            ) : (
+              <>
+                <span className="acc-timings-badge">
+                  🕒 Check-in Time: <strong>{(property && property.checkInTime) || CHECK_IN_TIME}</strong>
+                </span>
+                <span className="acc-timings-badge">
+                  🕚 Check-out Time: <strong>{(property && property.checkOutTime) || CHECK_OUT_TIME}</strong>
+                </span>
+              </>
+            )}
           </div>
 
           {error && (

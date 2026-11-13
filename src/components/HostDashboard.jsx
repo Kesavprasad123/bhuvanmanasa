@@ -116,11 +116,11 @@ function HostDashboard({
         status: 'cancelled',
         check_in: '2026-12-12',
         check_out: '2026-12-13',
-        check_in_time: CHECK_IN_TIME,
-        check_out_time: CHECK_OUT_TIME,
+        check_in_time: property.checkInTime || CHECK_IN_TIME,
+        check_out_time: property.checkOutTime || CHECK_OUT_TIME,
       };
     });
-  }, [bookings, property.rooms, propertyId]);
+  }, [bookings, property, propertyId]);
 
   // Overall statistics
   const overallStats = useMemo(() => {
@@ -292,7 +292,7 @@ function HostDashboard({
             {overallStats.krishna.occupied} / 8 <small>Occupied</small>
           </span>
           <span className="acc-metric-note">
-            {overallStats.krishna.available} available · Family &amp; Guests
+            {overallStats.krishna.available} available · Flexible Timings (12 Dec)
           </span>
         </div>
 
@@ -302,12 +302,12 @@ function HostDashboard({
           role="button"
           tabIndex={0}
         >
-          <span className="acc-metric-label">SVPC Convention</span>
+          <span className="acc-metric-label">SVPC Convention Hall 1</span>
           <span className="acc-metric-val">
             {overallStats.svpc.occupied} / 8 <small>Occupied</small>
           </span>
           <span className="acc-metric-note">
-            {overallStats.svpc.available} available · Convention Hall Stay
+            {overallStats.svpc.available} available · 12 Dec 9 AM → 13 Dec 7 AM
           </span>
         </div>
       </div>
@@ -336,11 +336,17 @@ function HostDashboard({
           })}
         </div>
 
-        {/* Static Timings Pill Banner */}
+        {/* Timings Banner */}
         <div className="acc-timings-strip">
-          <span className="acc-timing-item">🕒 Check-in: <strong>{CHECK_IN_TIME}</strong></span>
-          <span className="acc-timing-separator">|</span>
-          <span className="acc-timing-item">🕚 Check-out: <strong>{CHECK_OUT_TIME}</strong></span>
+          {property.flexibleTimings ? (
+            <span className="acc-timing-item">🕒 <strong>Flexible Timings</strong> (12 Dec 2026)</span>
+          ) : (
+            <>
+              <span className="acc-timing-item">🕒 Check-in: <strong>{property.checkInTime}</strong></span>
+              <span className="acc-timing-separator">|</span>
+              <span className="acc-timing-item">🕚 Check-out: <strong>{property.checkOutTime}</strong></span>
+            </>
+          )}
         </div>
       </div>
 
@@ -467,7 +473,7 @@ function HostDashboard({
                   <div className="acc-rc-timing-item">
                     <span className="acc-rc-sublabel">Times</span>
                     <span className="acc-rc-timing-val">
-                      In {CHECK_IN_TIME} · Out {CHECK_OUT_TIME}
+                      {property.flexibleTimings ? 'Flexible' : `In ${property.checkInTime} · Out ${property.checkOutTime}`}
                     </span>
                   </div>
                 </div>

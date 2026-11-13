@@ -28,7 +28,7 @@ const HOST_PIN_KEY = 'wedding_host_pin_code';
 const SYNC_CHANNEL_NAME = 'wedding_accommodation_sync';
 
 // Default 4-digit host PIN (can be customized by host)
-export const DEFAULT_HOST_PIN = '1212';
+export const DEFAULT_HOST_PIN = '9229';
 
 /** True when Supabase credentials are provided in the environment. */
 export const supabaseConfigured = Boolean(SUPABASE_URL && SUPABASE_KEY);
@@ -42,26 +42,37 @@ const WRONG_PIN = 'Invalid 4-digit access code. Please try again.';
 
 /* ---------------------------------------------------------------- Default Seed Data */
 
+/**
+ * Empty seed — no pre-defined guests. All rooms start as available.
+ * Host dynamically allocates rooms to arriving guests via the dashboard.
+ */
 export const DEFAULT_SEED_BOOKINGS = [
-  // Krishna Inn (Rooms 1 to 8)
-  { id: 'b1', property_id: 'krishna-inn', room: '1', guest_name: 'Sridhar', check_in: '2026-12-10', check_out: '2026-12-13', status: 'active', check_in_time: CHECK_IN_TIME, check_out_time: CHECK_OUT_TIME, updated_at: '2026-10-28T09:00:00Z' },
-  { id: 'b2', property_id: 'krishna-inn', room: '2', guest_name: 'Radha Krisha', check_in: '2026-12-12', check_out: '2026-12-13', status: 'active', check_in_time: CHECK_IN_TIME, check_out_time: CHECK_OUT_TIME, updated_at: '2026-10-28T09:00:00Z' },
-  { id: 'b3', property_id: 'krishna-inn', room: '3', guest_name: 'K Subbarao', check_in: '2026-12-12', check_out: '2026-12-13', status: 'active', check_in_time: CHECK_IN_TIME, check_out_time: CHECK_OUT_TIME, updated_at: '2026-10-28T09:00:00Z' },
-  { id: 'b4', property_id: 'krishna-inn', room: '4', guest_name: 'Shekar, Surya', check_in: '2026-12-12', check_out: '2026-12-13', status: 'active', check_in_time: CHECK_IN_TIME, check_out_time: CHECK_OUT_TIME, updated_at: '2026-10-28T09:00:00Z' },
-  { id: 'b5', property_id: 'krishna-inn', room: '5', guest_name: 'Additional', check_in: '2026-12-12', check_out: '2026-12-13', status: 'active', check_in_time: CHECK_IN_TIME, check_out_time: CHECK_OUT_TIME, updated_at: '2026-10-28T09:00:00Z' },
-  { id: 'b6', property_id: 'krishna-inn', room: '6', guest_name: 'Teja - Director', check_in: '2026-12-11', check_out: '2026-12-13', status: 'active', check_in_time: CHECK_IN_TIME, check_out_time: CHECK_OUT_TIME, updated_at: '2026-10-28T09:00:00Z' },
-  { id: 'b7', property_id: 'krishna-inn', room: '7', guest_name: 'Teja - Dheeraj', check_in: '2026-12-12', check_out: '2026-12-13', status: 'active', check_in_time: CHECK_IN_TIME, check_out_time: CHECK_OUT_TIME, updated_at: '2026-10-28T09:00:00Z' },
-  { id: 'b8', property_id: 'krishna-inn', room: '8', guest_name: 'Teja - Hari & Kranthi', check_in: '2026-12-12', check_out: '2026-12-13', status: 'active', check_in_time: CHECK_IN_TIME, check_out_time: CHECK_OUT_TIME, updated_at: '2026-10-28T09:00:00Z' },
-
-  // SVPC (Wedding Convention) (Rooms 1 to 8)
-  { id: 'b9', property_id: 'svpc', room: '1', guest_name: 'Aneel, Bala, Shiva', check_in: '2026-12-12', check_out: '2026-12-13', status: 'active', check_in_time: CHECK_IN_TIME, check_out_time: CHECK_OUT_TIME, updated_at: '2026-10-28T09:00:00Z' },
-  { id: 'b10', property_id: 'svpc', room: '2', guest_name: 'Shristi', check_in: '2026-12-12', check_out: '2026-12-13', status: 'active', check_in_time: CHECK_IN_TIME, check_out_time: CHECK_OUT_TIME, updated_at: '2026-10-28T09:00:00Z' },
-  { id: 'b11', property_id: 'svpc', room: '3', guest_name: 'Btech Boys', check_in: '2026-12-12', check_out: '2026-12-13', status: 'active', check_in_time: CHECK_IN_TIME, check_out_time: CHECK_OUT_TIME, updated_at: '2026-10-28T09:00:00Z' },
-  { id: 'b12', property_id: 'svpc', room: '4', guest_name: 'Btech Girls', check_in: '2026-12-12', check_out: '2026-12-13', status: 'active', check_in_time: CHECK_IN_TIME, check_out_time: CHECK_OUT_TIME, updated_at: '2026-10-28T09:00:00Z' },
-  { id: 'b13', property_id: 'svpc', room: '5', guest_name: 'Btech Girls', check_in: '2026-12-12', check_out: '2026-12-13', status: 'active', check_in_time: CHECK_IN_TIME, check_out_time: CHECK_OUT_TIME, updated_at: '2026-10-28T09:00:00Z' },
-  { id: 'b14', property_id: 'svpc', room: '6', guest_name: 'Manisha, Teja, Shylu', check_in: '2026-12-12', check_out: '2026-12-13', status: 'active', check_in_time: CHECK_IN_TIME, check_out_time: CHECK_OUT_TIME, updated_at: '2026-10-28T09:00:00Z' },
-  { id: 'b15', property_id: 'svpc', room: '7', guest_name: 'Chanti Frnds', check_in: '2026-12-12', check_out: '2026-12-13', status: 'active', check_in_time: CHECK_IN_TIME, check_out_time: CHECK_OUT_TIME, updated_at: '2026-10-28T09:00:00Z' },
-  { id: 'b16', property_id: 'svpc', room: '8', guest_name: 'Chanti Frnds', check_in: '2026-12-12', check_out: '2026-12-13', status: 'active', check_in_time: CHECK_IN_TIME, check_out_time: CHECK_OUT_TIME, updated_at: '2026-10-28T09:00:00Z' },
+  // Krishna Inn (Rooms 1 to 8) — all start vacant
+  ...PROPERTIES[0].rooms.map((r, i) => ({
+    id: `seed_krishna_${r}`,
+    property_id: 'krishna-inn',
+    room: r,
+    guest_name: '',
+    check_in: '2026-12-12',
+    check_out: '2026-12-13',
+    status: 'cancelled',
+    check_in_time: PROPERTIES[0].checkInTime,
+    check_out_time: PROPERTIES[0].checkOutTime,
+    updated_at: new Date().toISOString(),
+  })),
+  // SVPC Convention Hall 1 (Rooms 1 to 8) — all start vacant
+  ...PROPERTIES[1].rooms.map((r, i) => ({
+    id: `seed_svpc_${r}`,
+    property_id: 'svpc',
+    room: r,
+    guest_name: '',
+    check_in: '2026-12-12',
+    check_out: '2026-12-13',
+    status: 'cancelled',
+    check_in_time: PROPERTIES[1].checkInTime,
+    check_out_time: PROPERTIES[1].checkOutTime,
+    updated_at: new Date().toISOString(),
+  })),
 ];
 
 /* ---------------------------------------------------------------- Host PIN & Storage */
@@ -91,21 +102,31 @@ export function setHostPin(currentPin, newPin) {
   }
 }
 
+const MIGRATION_KEY = 'wedding_accommodation_v3_migrated';
+
 function readLocalBookings() {
   try {
+    // One-time migration: clear old pre-filled seed data and reset PIN to 9229
+    if (!localStorage.getItem(MIGRATION_KEY)) {
+      localStorage.removeItem(LOCAL_DB_KEY);
+      localStorage.removeItem(HOST_PIN_KEY);
+      localStorage.setItem(MIGRATION_KEY, '1');
+      localStorage.setItem(LOCAL_DB_KEY, JSON.stringify(DEFAULT_SEED_BOOKINGS));
+      return [...DEFAULT_SEED_BOOKINGS];
+    }
     const raw = localStorage.getItem(LOCAL_DB_KEY);
     if (!raw) {
       localStorage.setItem(LOCAL_DB_KEY, JSON.stringify(DEFAULT_SEED_BOOKINGS));
-      return DEFAULT_SEED_BOOKINGS;
+      return [...DEFAULT_SEED_BOOKINGS];
     }
     const parsed = JSON.parse(raw);
     if (!Array.isArray(parsed) || parsed.length === 0) {
       localStorage.setItem(LOCAL_DB_KEY, JSON.stringify(DEFAULT_SEED_BOOKINGS));
-      return DEFAULT_SEED_BOOKINGS;
+      return [...DEFAULT_SEED_BOOKINGS];
     }
     return parsed;
   } catch {
-    return DEFAULT_SEED_BOOKINGS;
+    return [...DEFAULT_SEED_BOOKINGS];
   }
 }
 
@@ -501,8 +522,7 @@ export function generateWhatsAppSummary(propertyId = null) {
 
   let lines = [
     '🏨 *BHUVAN & MANASA WEDDING ACCOMMODATION*',
-    '📅 *10 - 13 December 2026*',
-    `🕒 Check-in: ${CHECK_IN_TIME} | 🕚 Check-out: ${CHECK_OUT_TIME}`,
+    '📅 *12 December 2026*',
     '----------------------------------------',
   ];
 
@@ -515,6 +535,7 @@ export function generateWhatsAppSummary(propertyId = null) {
     lines.push('');
     lines.push(`📍 *${prop.name.toUpperCase()}* (${occupiedCount}/${prop.rooms.length} Occupied)`);
     if (prop.address) lines.push(`_${prop.address}_`);
+    if (prop.timingNote) lines.push(`🕒 ${prop.timingNote}`);
 
     prop.rooms.forEach((r) => {
       const b = propBookings.find((item) => String(item.room) === String(r));
