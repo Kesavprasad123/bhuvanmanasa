@@ -31,10 +31,15 @@ export function LanguageProvider({ children, initialLanguage = null }) {
     return getStoredLanguage();
   });
 
-  // Sync document language attribute
+  // Sync document language attribute and notify components
   useEffect(() => {
     if (typeof document !== 'undefined') {
       document.documentElement.lang = language;
+    }
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(
+        new CustomEvent('wedding-language-changed', { detail: { language } })
+      );
     }
   }, [language]);
 
@@ -44,6 +49,11 @@ export function LanguageProvider({ children, initialLanguage = null }) {
     try {
       localStorage.setItem(STORAGE_KEY, newLang);
     } catch {}
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(
+        new CustomEvent('wedding-language-changed', { detail: { language: newLang } })
+      );
+    }
   }, []);
 
   // Safe resolver for nested translation keys e.g. "hero.explore" or "events.items"

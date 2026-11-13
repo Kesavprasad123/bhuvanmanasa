@@ -2182,6 +2182,11 @@
     text-shadow: 0 2px 12px rgba(0, 0, 0, .55);
   }
 
+  html:not([lang="en"]) .feature-copy .feature-eyebrow,
+  html[lang="te"] .feature-copy .feature-eyebrow,
+  html[lang="ta"] .feature-copy .feature-eyebrow,
+  html[lang="ml"] .feature-copy .feature-eyebrow,
+  html[lang="hi"] .feature-copy .feature-eyebrow,
   .feature-copy.is-indic .feature-eyebrow {
     letter-spacing: 2px;
   }
@@ -2194,7 +2199,7 @@
     gap: clamp(12px, 2.5vw, 24px);
     margin: 4px 0;
     line-height: 1;
-    font-family: "Great Vibes", cursive;
+    font-family: "Great Vibes", "Noto Serif Telugu", "Noto Serif Tamil", "Noto Serif Malayalam", "Noto Serif Devanagari", cursive, serif;
     font-size: clamp(48px, 8.5vw, 98px);
     font-weight: 400;
     color: #ffffff;
@@ -2202,6 +2207,11 @@
     white-space: nowrap;
   }
 
+  html:not([lang="en"]) .feature-copy .feature-names,
+  html[lang="te"] .feature-copy .feature-names,
+  html[lang="ta"] .feature-copy .feature-names,
+  html[lang="ml"] .feature-copy .feature-names,
+  html[lang="hi"] .feature-copy .feature-names,
   .feature-copy.is-indic .feature-names {
     font-family: "Noto Serif Telugu", "Noto Serif Tamil", "Noto Serif Malayalam", "Noto Serif Devanagari", "Playfair Display", serif;
     font-size: clamp(30px, 5.5vw, 64px);
@@ -2242,6 +2252,11 @@
     text-shadow: 0 2px 10px rgba(0, 0, 0, .5);
   }
 
+  html:not([lang="en"]) .feature-copy .feature-date,
+  html[lang="te"] .feature-copy .feature-date,
+  html[lang="ta"] .feature-copy .feature-date,
+  html[lang="ml"] .feature-copy .feature-date,
+  html[lang="hi"] .feature-copy .feature-date,
   .feature-copy.is-indic .feature-date {
     letter-spacing: 3px;
   }
@@ -2989,8 +3004,10 @@
     transform: none
   }
 
-  .feature-copy.reveal.visible {
-    transform: translate(-50%, -50%);
+  .feature-copy.reveal.visible,
+  .feature-copy.visible {
+    opacity: 1 !important;
+    transform: translate(-50%, -50%) !important;
   }
 
   /* ---------- RESPONSIVE ---------- */
@@ -3132,6 +3149,11 @@
       gap: 12px;
     }
 
+    html:not([lang="en"]) .feature-copy .feature-names,
+    html[lang="te"] .feature-copy .feature-names,
+    html[lang="ta"] .feature-copy .feature-names,
+    html[lang="ml"] .feature-copy .feature-names,
+    html[lang="hi"] .feature-copy .feature-names,
     .feature-copy.is-indic .feature-names {
       font-size: clamp(24px, 6.2vw, 42px);
       gap: 10px;

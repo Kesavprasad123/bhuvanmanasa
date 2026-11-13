@@ -56,11 +56,19 @@ function useScrollReveal(isActive = true) {
       });
     }, 1500);
 
+    // Re-evaluate elements whenever the user changes website language
+    const handleLanguageChange = () => {
+      scanAndObserve();
+      setTimeout(scanAndObserve, 80);
+    };
+    window.addEventListener('wedding-language-changed', handleLanguageChange);
+
     return () => {
       clearTimeout(t1);
       clearTimeout(t2);
       clearTimeout(t3);
       clearTimeout(safety);
+      window.removeEventListener('wedding-language-changed', handleLanguageChange);
       if (observer) observer.disconnect();
     };
   }, [isActive]);
