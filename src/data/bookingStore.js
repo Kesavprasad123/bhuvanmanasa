@@ -52,6 +52,34 @@ export function setHostPin(currentPin, newPin) {
 /* ---------------------------------------------------------------- Tracker Storage Engine */
 
 const MIGRATION_KEY = 'wedding_tracker_v5_migrated';
+const EMPTY_PURGE_MIGRATION_KEY = 'wedding_tracker_empty_purged_v3';
+
+/**
+ * Determines if a tracker entry is empty, incomplete, or corrupted.
+ * An entry is empty if it lacks a valid room number or lacks a valid guest name.
+ */
+export function isEntryEmpty(entry) {
+  if (!entry || typeof entry !== 'object') return true;
+
+  const room = String(entry.roomNumber || '').trim();
+  const guest = String(entry.guestName || '').trim();
+
+  // Room must be non-empty and not a placeholder
+  if (!room || /^(not assigned|undefined|null|n\/a|none)$/i.test(room)) {
+    return true;
+  }
+
+  // Guest name must be non-empty and not a placeholder
+  if (!guest || /^(name not specified|unnamed|undefined|null|n\/a|none)$/i.test(guest)) {
+    return true;
+  }
+
+  return false;
+}
+
+export function isEntryValid(entry) {
+  return !isEntryEmpty(entry);
+}
 
 function cleanOldStorage() {
   try {
@@ -63,6 +91,18 @@ function cleanOldStorage() {
       localStorage.removeItem(TRACKER_STORAGE_KEY);
       localStorage.setItem(MIGRATION_KEY, '1');
       localStorage.setItem(HOST_PIN_KEY, DEFAULT_HOST_PIN);
+    }
+
+    // Force purge all empty entries from storage immediately
+    const raw = localStorage.getItem(TRACKER_STORAGE_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) {
+        const cleaned = parsed.filter(isEntryValid);
+        if (cleaned.length !== parsed.length) {
+          localStorage.setItem(TRACKER_STORAGE_KEY, JSON.stringify(cleaned));
+        }
+      }
     }
   } catch {
     // ignore
@@ -84,23 +124,15 @@ export function fetchTrackerEntries() {
   try {
     cleanOldStorage();
     if (typeof localStorage === 'undefined') {
-      return [...memoryStore];
+      return memoryStore.filter(isEntryValid);
     }
     const raw = localStorage.getItem(TRACKER_STORAGE_KEY);
     if (!raw) return [];
     const parsed = JSON.parse(raw);
     if (!Array.isArray(parsed)) return [];
 
-    // Filter out corrupted / empty entries that have no valid room number
-    const valid = parsed.filter(
-      (entry) =>
-        entry &&
-        typeof entry.roomNumber === 'string' &&
-        entry.roomNumber.trim().length > 0 &&
-        entry.roomNumber.trim().toLowerCase() !== 'not assigned' &&
-        entry.roomNumber.trim().toLowerCase() !== 'undefined' &&
-        entry.roomNumber.trim().toLowerCase() !== 'null'
-    );
+    // Filter out all empty, incomplete, or corrupted entries
+    const valid = parsed.filter(isEntryValid);
 
     // If invalid/empty entries were found, immediately sync cleaned list back
     if (valid.length !== parsed.length) {
@@ -108,7 +140,7 @@ export function fetchTrackerEntries() {
     }
     return valid;
   } catch {
-    return [...memoryStore];
+    return memoryStore.filter(isEntryValid);
   }
 }
 
@@ -355,10 +387,29 @@ export async function clearVacantEntries(propertyId = null) {
 }
 
 /**
+ * Removes all empty, incomplete, or corrupted entries from the tracker.
+ */
+export async function removeEmptyEntries() {
+  const entries = fetchTrackerEntries();
+  const valid = entries.filter(isEntryValid);
+  writeTrackerEntries(valid);
+  return valid;
+}
+
+/**
+ * Removes all entries from the tracker completely.
+ */
+export async function clearAllTrackerEntries() {
+  writeTrackerEntries([]);
+  return [];
+}
+
+/**
  * Computes live occupancy metrics for both locations.
  */
 export function fetchTrackerStats(entriesList = null) {
-  const entries = entriesList || fetchTrackerEntries();
+  const source = entriesList || fetchTrackerEntries();
+  const entries = source.filter(isEntryValid);
 
   const krishnaEntries = entries.filter((e) => e.propertyId === 'krishna-inn');
   const svpcEntries = entries.filter((e) => e.propertyId === 'svpc');

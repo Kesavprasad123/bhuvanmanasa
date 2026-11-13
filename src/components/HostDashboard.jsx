@@ -1,11 +1,15 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { PROPERTIES } from '../data/accommodation.js';
 import {
+  clearAllTrackerEntries,
   clearVacantEntries,
   deleteTrackerEntry,
   fetchTrackerEntries,
   fetchTrackerStats,
   generateWhatsAppSummary,
+  isEntryEmpty,
+  isEntryValid,
+  removeEmptyEntries,
   saveTrackerEntry,
   subscribeToDatabaseChanges,
   toggleEntryStatus,
@@ -71,7 +75,7 @@ export default function HostDashboard({
 
   const loadEntries = useCallback(() => {
     try {
-      const data = fetchTrackerEntries();
+      const data = fetchTrackerEntries().filter(isEntryValid);
       setEntries(data);
     } catch (err) {
       console.error('Failed to load tracker entries:', err);
@@ -79,6 +83,8 @@ export default function HostDashboard({
   }, []);
 
   useEffect(() => {
+    // Purge any empty, incomplete, or placeholder entries immediately on mount
+    removeEmptyEntries().catch(() => {});
     loadEntries();
     const unsub = subscribeToDatabaseChanges(() => {
       loadEntries();
@@ -94,13 +100,18 @@ export default function HostDashboard({
     }
   };
 
-  // Metrics
+  // Metrics (computed only on valid, non-empty entries)
   const stats = useMemo(() => fetchTrackerStats(entries), [entries]);
 
   // Filtered entries for tracker list/table
   const filteredEntries = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
     return entries.filter((item) => {
+      // Defensively exclude any empty or invalid entries
+      if (isEntryEmpty(item)) {
+        return false;
+      }
+
       // Guests only see allocated / occupied rooms — vacant rooms are strictly hidden from guests
       if (!isHost && item.status !== 'occupied') {
         return false;
@@ -257,6 +268,38 @@ export default function HostDashboard({
       showToast(`Cleared ${count} vacant entries.`);
     } catch (err) {
       showToast('Could not clear vacant entries: ' + err.message);
+    }
+  };
+
+  // Explicitly remove any empty or incomplete entries
+  const handleRemoveEmptyEntries = async () => {
+    if (!isHost) return;
+    try {
+      await removeEmptyEntries();
+      loadEntries();
+      showToast('✓ Empty entries removed from tracker.');
+    } catch (err) {
+      showToast('Could not remove empty entries: ' + err.message);
+    }
+  };
+
+  // Clear all tracker entries (Host full reset)
+  const handleClearAllEntries = async () => {
+    if (!isHost) return;
+    if (entries.length === 0) return;
+    if (
+      !window.confirm(
+        `Are you sure you want to remove ALL ${entries.length} entries from the tracker? This cannot be undone.`
+      )
+    ) {
+      return;
+    }
+    try {
+      await clearAllTrackerEntries();
+      loadEntries();
+      showToast('All tracker entries cleared.');
+    } catch (err) {
+      showToast('Could not clear entries: ' + err.message);
     }
   };
 
@@ -635,6 +678,19 @@ export default function HostDashboard({
                   🗑️ Clear All Vacant ({stats.totalVacant})
                 </button>
               )}
+              <button
+                type="button"
+                className="acc-filter-pill"
+                onClick={handleRemoveEmptyEntries}
+                title="Remove any empty or incomplete entries from the tracker"
+                style={{
+                  background: 'rgba(239, 68, 68, 0.12)',
+                  borderColor: 'rgba(239, 68, 68, 0.3)',
+                  color: '#fca5a5',
+                }}
+              >
+                🧹 Remove Empty Entries
+              </button>
             </div>
           )}
         </div>
