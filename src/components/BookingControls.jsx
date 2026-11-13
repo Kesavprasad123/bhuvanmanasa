@@ -79,13 +79,12 @@ export function HostLoginDialog({ open, onClose, onSuccess }) {
 
   if (!open) return null;
 
-  const handleSubmit = async (event) => {
-    event.preventDefault();
+  const attemptLogin = async (pinValue) => {
     if (busy) return;
     setBusy(true);
     setError('');
     try {
-      await loginHost(pin);
+      await loginHost(pinValue);
       setPin('');
       onSuccessRef.current();
     } catch (err) {
@@ -95,11 +94,21 @@ export function HostLoginDialog({ open, onClose, onSuccess }) {
     }
   };
 
+  const handleSubmit = async (event) => {
+    if (event && event.preventDefault) event.preventDefault();
+    attemptLogin(pin);
+  };
+
   const handleKeypadDigit = (digit) => {
     if (pin.length < 4) {
       const nextPin = pin + digit;
       setPin(nextPin);
       if (error) setError('');
+      if (nextPin.length === 4) {
+        setTimeout(() => {
+          attemptLogin(nextPin);
+        }, 150);
+      }
     }
   };
 
@@ -157,8 +166,14 @@ export function HostLoginDialog({ open, onClose, onSuccess }) {
             maxLength={4}
             value={pin}
             onChange={(event) => {
-              setPin(event.target.value.replace(/\D/g, '').slice(0, 4));
+              const clean = event.target.value.replace(/\D/g, '').slice(0, 4);
+              setPin(clean);
               if (error) setError('');
+              if (clean.length === 4) {
+                setTimeout(() => {
+                  attemptLogin(clean);
+                }, 150);
+              }
             }}
           />
 

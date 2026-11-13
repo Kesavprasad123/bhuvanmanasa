@@ -226,7 +226,7 @@ function Accommodation({
 
   // Host session
   const [showLogin, setShowLogin] = useState(false);
-  const [hostLoggedIn, setHostLoggedIn] = useState(isHostLoggedIn);
+  const [hostLoggedIn, setHostLoggedIn] = useState(() => isHostLoggedIn());
 
   useScrollReveal('accommodation');
 
@@ -266,9 +266,23 @@ function Accommodation({
     };
   }, []);
 
+  const handleScrollToForm = () => {
+    const formEl = document.getElementById('acc-tracker-form');
+    if (formEl) {
+      formEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      setTimeout(() => {
+        const input = document.getElementById('tr-guest-name');
+        if (input) input.focus();
+      }, 200);
+    }
+  };
+
   const handleLoginSuccess = () => {
     setShowLogin(false);
     setHostLoggedIn(true);
+    setTimeout(() => {
+      handleScrollToForm();
+    }, 120);
   };
 
   const handleLogout = async () => {
@@ -321,8 +335,16 @@ function Accommodation({
             </button>
           ) : (
             <>
+              <button
+                type="button"
+                className="acc-host-link is-action"
+                onClick={handleScrollToForm}
+                title="Jump to Create Room Entry form"
+              >
+                ➕ Allocate Room
+              </button>
               <span className="acc-host-mode-pill">
-                👑 Host Mode (Edit Access)
+                👑 Host Mode
               </span>
               <button
                 type="button"
@@ -359,11 +381,11 @@ function Accommodation({
 
         {/* 2 Locations Showcase Cards (Always visible to all guests) */}
         <section className="acc-public-view">
-          <div className="acc-location-selector reveal">
+          <div className="acc-location-selector">
             <span className="acc-selector-title">Accommodation Arranged at 2 Locations:</span>
           </div>
 
-          <div className="acc-venues-showcase reveal">
+          <div className="acc-venues-showcase">
             {PROPERTIES.map((property, idx) => (
               <div
                 key={property.id}

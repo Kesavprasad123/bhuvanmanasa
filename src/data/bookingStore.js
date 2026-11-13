@@ -134,7 +134,13 @@ export function subscribeToDatabaseChanges(callback) {
 
   const handleMessage = () => callback();
   const handleStorage = (event) => {
-    if (event.key === TRACKER_STORAGE_KEY || event.key === HOST_PIN_KEY) callback();
+    if (
+      event.key === TRACKER_STORAGE_KEY ||
+      event.key === HOST_PIN_KEY ||
+      event.key === SESSION_STORAGE_KEY
+    ) {
+      callback();
+    }
   };
 
   if (syncChannel) {
@@ -154,7 +160,11 @@ export function subscribeToDatabaseChanges(callback) {
 
 function readSession() {
   try {
-    return sessionStorage.getItem(SESSION_STORAGE_KEY) || '';
+    const local = typeof localStorage !== 'undefined' ? localStorage.getItem(SESSION_STORAGE_KEY) : '';
+    if (local && local.startsWith('host_session_')) return local;
+    const session = typeof sessionStorage !== 'undefined' ? sessionStorage.getItem(SESSION_STORAGE_KEY) : '';
+    if (session && session.startsWith('host_session_')) return session;
+    return '';
   } catch {
     return '';
   }
@@ -162,8 +172,13 @@ function readSession() {
 
 function writeSession(token) {
   try {
-    if (token) sessionStorage.setItem(SESSION_STORAGE_KEY, token);
-    else sessionStorage.removeItem(SESSION_STORAGE_KEY);
+    if (token) {
+      if (typeof localStorage !== 'undefined') localStorage.setItem(SESSION_STORAGE_KEY, token);
+      if (typeof sessionStorage !== 'undefined') sessionStorage.setItem(SESSION_STORAGE_KEY, token);
+    } else {
+      if (typeof localStorage !== 'undefined') localStorage.removeItem(SESSION_STORAGE_KEY);
+      if (typeof sessionStorage !== 'undefined') sessionStorage.removeItem(SESSION_STORAGE_KEY);
+    }
   } catch {
     // ignore
   }

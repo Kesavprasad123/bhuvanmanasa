@@ -50,6 +50,17 @@ export default function HostDashboard({
   const [showChangePin, setShowChangePin] = useState(false);
   const [deleteConfirmId, setDeleteConfirmId] = useState(null);
 
+  const handleFocusCreateEntry = () => {
+    const formEl = document.getElementById('acc-tracker-form');
+    if (formEl) {
+      formEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      setTimeout(() => {
+        const input = document.getElementById('tr-guest-name');
+        if (input) input.focus();
+      }, 250);
+    }
+  };
+
   const showToast = (msg) => {
     setToastMessage(msg);
     setTimeout(() => {
@@ -235,7 +246,7 @@ export default function HostDashboard({
       )}
 
       {/* Top Header */}
-      <div className="acc-dash-head reveal">
+      <div className="acc-dash-head">
         <div className="acc-dash-title-block">
           <div className="acc-host-badge-row">
             {isHost ? (
@@ -256,6 +267,14 @@ export default function HostDashboard({
         <div className="acc-dash-head-actions">
           {isHost ? (
             <>
+              <button
+                type="button"
+                className="gold-button acc-create-entry-btn"
+                onClick={handleFocusCreateEntry}
+                title="Create a new room allocation entry"
+              >
+                ➕ Create Entry
+              </button>
               <button
                 type="button"
                 className="acc-whatsapp-button"
@@ -299,7 +318,7 @@ export default function HostDashboard({
       </div>
 
       {/* Overview Metrics Cards */}
-      <div className="acc-metrics-strip reveal">
+      <div className="acc-metrics-strip">
         <div
           className={`acc-metric-card is-primary${activePropertyId === 'all' ? ' is-active-location' : ''}`}
           onClick={() => handleLocationTabSelect('all')}
@@ -348,7 +367,7 @@ export default function HostDashboard({
 
       {/* CREATE / EDIT ENTRY FORM (Host Edit Access Only) */}
       {isHost ? (
-        <div id="acc-tracker-form" className="acc-tracker-form-card reveal">
+        <div id="acc-tracker-form" className="acc-tracker-form-card">
           <div className="acc-form-header">
             <div>
               <h3 className="acc-form-title">
@@ -521,7 +540,7 @@ export default function HostDashboard({
         </div>
       ) : (
         /* Read-Only Notice for Guests */
-        <div className="acc-readonly-notice reveal">
+        <div className="acc-readonly-notice">
           <div className="acc-readonly-info">
             <span className="acc-readonly-lock">🔒</span>
             <div>
@@ -544,7 +563,7 @@ export default function HostDashboard({
       )}
 
       {/* TRACKER ENTRIES LIST / TABLE */}
-      <div className="acc-tracker-section reveal">
+      <div className="acc-tracker-section">
         <div className="acc-tracker-header">
           <div>
             <h3 className="acc-tracker-title">
