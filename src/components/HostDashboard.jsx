@@ -100,24 +100,32 @@ export default function HostDashboard({
   const filteredEntries = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
     return entries.filter((item) => {
+      // Guests only see allocated / occupied rooms — vacant rooms are strictly hidden from guests
+      if (!isHost && item.status !== 'occupied') {
+        return false;
+      }
+
       // Location filter
       if (activePropertyId !== 'all' && item.propertyId !== activePropertyId) {
         return false;
       }
-      // Status filter
-      if (statusFilter === 'occupied' && item.status !== 'occupied') return false;
-      if (statusFilter === 'vacant' && item.status !== 'vacant') return false;
+
+      // Status filter (for Host only)
+      if (isHost) {
+        if (statusFilter === 'occupied' && item.status !== 'occupied') return false;
+        if (statusFilter === 'vacant' && item.status !== 'vacant') return false;
+      }
 
       // Search query
       if (query) {
         const matchName = String(item.guestName || '').toLowerCase().includes(query);
-        const matchPhone = String(item.guestPhone || '').toLowerCase().includes(query);
+        const matchPhone = isHost ? String(item.guestPhone || '').toLowerCase().includes(query) : false;
         const matchRoom = String(item.roomNumber || '').toLowerCase().includes(query);
         return matchName || matchPhone || matchRoom;
       }
       return true;
     });
-  }, [entries, activePropertyId, statusFilter, searchQuery]);
+  }, [entries, activePropertyId, statusFilter, searchQuery, isHost]);
 
   // Reset form
   const resetForm = () => {
@@ -327,10 +335,12 @@ export default function HostDashboard({
         >
           <span className="acc-metric-label">All Locations</span>
           <span className="acc-metric-val">
-            {stats.totalOccupied} <small>Occupied</small>
+            {stats.totalOccupied} <small>{isHost ? 'Occupied' : 'Allocated'}</small>
           </span>
           <span className="acc-metric-note">
-            {stats.totalVacant} vacant · {stats.totalEntries} total tracked
+            {isHost
+              ? `${stats.totalVacant} vacant · ${stats.totalEntries} total tracked`
+              : `${stats.totalOccupied} rooms allocated for guests`}
           </span>
         </div>
 
@@ -342,7 +352,7 @@ export default function HostDashboard({
         >
           <span className="acc-metric-label">1. Krishna IN</span>
           <span className="acc-metric-val">
-            {stats.krishna.occupied} <small>Occupied</small>
+            {stats.krishna.occupied} <small>{isHost ? 'Occupied' : 'Allocated'}</small>
           </span>
           <span className="acc-metric-note">
             Flexible timings · 12 Dec 2026
@@ -357,7 +367,7 @@ export default function HostDashboard({
         >
           <span className="acc-metric-label">2. SVPC Convention Hall 1</span>
           <span className="acc-metric-val">
-            {stats.svpc.occupied} <small>Occupied</small>
+            {stats.svpc.occupied} <small>{isHost ? 'Occupied' : 'Allocated'}</small>
           </span>
           <span className="acc-metric-note">
             Wedding Hall · 12 Dec 9 AM → 13 Dec 7 AM
@@ -572,34 +582,36 @@ export default function HostDashboard({
             <p className="acc-tracker-subtitle">
               {isHost
                 ? 'Reference record of occupied and vacated rooms with full edit controls.'
-                : 'Live list of occupied rooms for guest reference.'}
+                : 'Live list of allocated rooms for guest reference.'}
             </p>
           </div>
 
-          {/* Filter Pills */}
-          <div className="acc-filter-pills" role="group" aria-label="Filter status">
-            <button
-              type="button"
-              className={`acc-filter-pill${statusFilter === 'all' ? ' is-active' : ''}`}
-              onClick={() => setStatusFilter('all')}
-            >
-              All ({entries.length})
-            </button>
-            <button
-              type="button"
-              className={`acc-filter-pill is-occupied${statusFilter === 'occupied' ? ' is-active' : ''}`}
-              onClick={() => setStatusFilter('occupied')}
-            >
-              🔴 Occupied ({stats.totalOccupied})
-            </button>
-            <button
-              type="button"
-              className={`acc-filter-pill is-available${statusFilter === 'vacant' ? ' is-active' : ''}`}
-              onClick={() => setStatusFilter('vacant')}
-            >
-              🟢 Vacant ({stats.totalVacant})
-            </button>
-          </div>
+          {/* Filter Pills - Host Only (vacant controls strictly for Host) */}
+          {isHost && (
+            <div className="acc-filter-pills" role="group" aria-label="Filter status">
+              <button
+                type="button"
+                className={`acc-filter-pill${statusFilter === 'all' ? ' is-active' : ''}`}
+                onClick={() => setStatusFilter('all')}
+              >
+                All ({entries.length})
+              </button>
+              <button
+                type="button"
+                className={`acc-filter-pill is-occupied${statusFilter === 'occupied' ? ' is-active' : ''}`}
+                onClick={() => setStatusFilter('occupied')}
+              >
+                🔴 Occupied ({stats.totalOccupied})
+              </button>
+              <button
+                type="button"
+                className={`acc-filter-pill is-available${statusFilter === 'vacant' ? ' is-active' : ''}`}
+                onClick={() => setStatusFilter('vacant')}
+              >
+                🟢 Vacant ({stats.totalVacant})
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Search Bar */}
@@ -632,7 +644,7 @@ export default function HostDashboard({
         {filteredEntries.length === 0 ? (
           <div className="acc-empty-tracker">
             <span className="acc-empty-icon" aria-hidden="true">📭</span>
-            <h4>No room entries recorded yet</h4>
+            <h4>{isHost ? 'No room entries recorded yet' : 'No room allocations recorded yet'}</h4>
             <p>
               {searchQuery
                 ? `No entries match "${searchQuery}".`
@@ -664,18 +676,23 @@ export default function HostDashboard({
                         {prop.name}
                       </span>
 
-                      <span
-                        className={`acc-status-tag${isOccupied ? ' is-occupied' : ' is-vacant'}${isHost ? ' is-clickable' : ''}`}
-                        onClick={() => {
-                          if (isHost) {
+                      {isHost ? (
+                        <span
+                          className={`acc-status-tag${isOccupied ? ' is-occupied' : ' is-vacant'} is-clickable`}
+                          onClick={() => {
                             handleToggleStatus(entry.id, entry.status, entry.roomNumber);
-                          }
-                        }}
-                        title={isHost ? 'Click to toggle status between Occupied and Vacant' : undefined}
-                      >
-                        <span className="acc-status-dot" />
-                        <span>{isOccupied ? 'Occupied' : 'Vacant'}</span>
-                      </span>
+                          }}
+                          title="Click to toggle status between Occupied and Vacant"
+                        >
+                          <span className="acc-status-dot" />
+                          <span>{isOccupied ? 'Occupied' : 'Vacant'}</span>
+                        </span>
+                      ) : (
+                        <span className="acc-status-tag is-occupied">
+                          <span className="acc-status-dot" />
+                          <span>Allocated</span>
+                        </span>
+                      )}
                     </div>
 
                     {/* Guest Name & Number */}
