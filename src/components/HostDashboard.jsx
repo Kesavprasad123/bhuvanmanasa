@@ -31,11 +31,22 @@ export default function HostDashboard({
   role = 'guest',
   isHost = false,
   isAdmin = false,
+  isFormOpen = false,
+  onToggleForm,
   onOpenLogin,
   onExit,
   onLogout,
   onSessionExpired,
 }) {
+  const [internalFormOpen, setInternalFormOpen] = useState(false);
+  const isFormExpanded = typeof onToggleForm === 'function' ? isFormOpen : internalFormOpen;
+  const setFormExpanded = (val) => {
+    if (typeof onToggleForm === 'function') {
+      onToggleForm(val);
+    }
+    setInternalFormOpen(val);
+  };
+
   const [entries, setEntries] = useState([]);
   const [activePropertyId, setActivePropertyId] = useState('all'); // 'all' | 'krishna-inn' | 'svpc'
   const [statusFilter, setStatusFilter] = useState('all'); // 'all' | 'occupied' | 'vacant'
@@ -57,14 +68,23 @@ export default function HostDashboard({
   const [showAdminPasscodeDialog, setShowAdminPasscodeDialog] = useState(false);
   const [deleteConfirmId, setDeleteConfirmId] = useState(null);
 
-  const handleFocusCreateEntry = () => {
-    const formEl = document.getElementById('acc-tracker-form');
-    if (formEl) {
-      formEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  const handleToggleCreateEntry = () => {
+    if (isFormExpanded && !editingId) {
+      setFormExpanded(false);
+      resetForm();
+    } else {
+      resetForm();
+      setFormExpanded(true);
       setTimeout(() => {
-        const input = document.getElementById('tr-guest-name');
-        if (input) input.focus();
-      }, 250);
+        const formEl = document.getElementById('acc-tracker-form');
+        if (formEl) {
+          formEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          setTimeout(() => {
+            const input = document.getElementById('tr-guest-name');
+            if (input) input.focus();
+          }, 150);
+        }
+      }, 60);
     }
   };
 
@@ -162,12 +182,19 @@ export default function HostDashboard({
     setCheckIn(entry.checkIn || '2026-12-12');
     setCheckOut(entry.checkOut || '2026-12-13');
     setFormError('');
+    setFormExpanded(true);
 
     // Scroll to form smoothly
-    const formEl = document.getElementById('acc-tracker-form');
-    if (formEl) {
-      formEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }
+    setTimeout(() => {
+      const formEl = document.getElementById('acc-tracker-form');
+      if (formEl) {
+        formEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        setTimeout(() => {
+          const input = document.getElementById('tr-guest-name');
+          if (input) input.focus();
+        }, 150);
+      }
+    }, 60);
   };
 
   // Handle Form Submission (Save with Allocate or Vacant)
@@ -223,6 +250,7 @@ export default function HostDashboard({
             : `✓ Room ${cleanRoom} marked as Vacant.`
         );
       }
+      setFormExpanded(false);
       resetForm();
     } catch (err) {
       setFormError((err && err.message) || 'Failed to save room entry.');
@@ -373,11 +401,11 @@ export default function HostDashboard({
             <>
               <button
                 type="button"
-                className="gold-button acc-create-entry-btn"
-                onClick={handleFocusCreateEntry}
-                title="Create a new room allocation entry"
+                className={`gold-button acc-create-entry-btn${isFormExpanded ? ' is-active' : ''}`}
+                onClick={handleToggleCreateEntry}
+                title={isFormExpanded ? 'Close entry form' : 'Create a new room allocation entry'}
               >
-                ➕ Create Entry
+                {isFormExpanded ? '✕ Close Form' : '➕ Create Entry'}
               </button>
               <button
                 type="button"
@@ -462,8 +490,8 @@ export default function HostDashboard({
         </div>
       </div>
 
-      {/* CREATE / EDIT ENTRY FORM (Host Only) */}
-      {isHost && (
+      {/* CREATE / EDIT ENTRY FORM (Host & Admin Only - expands when requested) */}
+      {isHost && isFormExpanded && (
         <div id="acc-tracker-form" className="acc-tracker-form-card">
           <div className="acc-form-header">
             <div>
@@ -474,15 +502,17 @@ export default function HostDashboard({
                 Enter guest information upon arrival to track which room is assigned.
               </p>
             </div>
-            {editingId && (
-              <button
-                type="button"
-                className="acc-ghost-button"
-                onClick={resetForm}
-              >
-                Cancel Edit
-              </button>
-            )}
+            <button
+              type="button"
+              className="acc-ghost-button"
+              onClick={() => {
+                setFormExpanded(false);
+                resetForm();
+              }}
+              title="Close form"
+            >
+              {editingId ? 'Cancel Edit' : '✕ Close'}
+            </button>
           </div>
 
           <form
@@ -630,15 +660,16 @@ export default function HostDashboard({
                 🟢 Mark as Vacant
               </button>
 
-              {editingId && (
-                <button
-                  type="button"
-                  className="acc-ghost-button"
-                  onClick={resetForm}
-                >
-                  Clear
-                </button>
-              )}
+              <button
+                type="button"
+                className="acc-ghost-button"
+                onClick={() => {
+                  setFormExpanded(false);
+                  resetForm();
+                }}
+              >
+                {editingId ? 'Cancel' : 'Close'}
+              </button>
             </div>
           </form>
         </div>

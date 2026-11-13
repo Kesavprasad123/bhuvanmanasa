@@ -229,6 +229,7 @@ function Accommodation({
   // Host and Admin session
   const [showLogin, setShowLogin] = useState(false);
   const [userRole, setUserRole] = useState(() => getActiveRole());
+  const [isFormOpen, setIsFormOpen] = useState(false);
   const isHost = userRole === 'host' || userRole === 'admin';
   const isAdmin = userRole === 'admin';
 
@@ -273,31 +274,34 @@ function Accommodation({
   }, []);
 
   const handleScrollToForm = () => {
-    const formEl = document.getElementById('acc-tracker-form');
-    if (formEl) {
-      formEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      setTimeout(() => {
-        const input = document.getElementById('tr-guest-name');
-        if (input) input.focus();
-      }, 200);
-    }
+    setIsFormOpen(true);
+    setTimeout(() => {
+      const formEl = document.getElementById('acc-tracker-form');
+      if (formEl) {
+        formEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        setTimeout(() => {
+          const input = document.getElementById('tr-guest-name');
+          if (input) input.focus();
+        }, 150);
+      }
+    }, 60);
   };
 
   const handleLoginSuccess = (role) => {
     setShowLogin(false);
     setUserRole(role || getActiveRole());
-    setTimeout(() => {
-      handleScrollToForm();
-    }, 120);
+    setIsFormOpen(false);
   };
 
   const handleLogout = async () => {
     await logoutUser();
     setUserRole('guest');
+    setIsFormOpen(false);
   };
 
   const handleSessionExpired = () => {
     setUserRole('guest');
+    setIsFormOpen(false);
     setShowLogin(true);
   };
 
@@ -446,6 +450,8 @@ function Accommodation({
           role={userRole}
           isHost={isHost}
           isAdmin={isAdmin}
+          isFormOpen={isFormOpen}
+          onToggleForm={setIsFormOpen}
           onOpenLogin={() => setShowLogin(true)}
           onLogout={handleLogout}
           onSessionExpired={handleSessionExpired}

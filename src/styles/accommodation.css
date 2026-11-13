@@ -1080,6 +1080,18 @@
   display: flex;
   flex-direction: column;
   gap: 20px;
+  animation: accFormSlideDown 0.28s ease-out;
+}
+
+@keyframes accFormSlideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .acc-form-header {
@@ -1789,6 +1801,12 @@ body.dark-theme .acc-create-entry-btn {
   cursor: pointer;
   min-height: 44px;
   white-space: nowrap;
+}
+
+.acc-create-entry-btn.is-active {
+  background: linear-gradient(135deg, #7d2c40, #4c1825);
+  color: #fff8ee;
+  border-color: rgba(255, 255, 255, 0.4);
 }
 
 .acc-host-link.is-action {
