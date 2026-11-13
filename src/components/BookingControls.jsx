@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from 'react';
 import { CHECK_IN_TIME, CHECK_OUT_TIME } from '../data/accommodation';
 import {
   loginHost,
-  roomConflictsWith,
   setHostPin,
 } from '../data/bookingStore';
 

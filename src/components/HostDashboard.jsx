@@ -1,19 +1,15 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { CHECK_IN_TIME, CHECK_OUT_TIME, PROPERTIES } from '../data/accommodation';
+import { PROPERTIES } from '../data/accommodation.js';
 import {
-  clearRoomAllocation,
-  fetchBookings,
+  deleteTrackerEntry,
+  fetchTrackerEntries,
+  fetchTrackerStats,
   generateWhatsAppSummary,
-  isSessionExpired,
-  saveRoomAllocation,
+  saveTrackerEntry,
   subscribeToDatabaseChanges,
-  toggleRoomStatus,
-} from '../data/bookingStore';
-import {
-  ChangePinDialog,
-  ConfirmDialog,
-  RoomAllocationDialog,
-} from './BookingControls';
+  toggleEntryStatus,
+} from '../data/bookingStore.js';
+import { ChangePinDialog, ConfirmDialog } from './BookingControls.jsx';
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
@@ -26,42 +22,31 @@ function formatDateShort(iso) {
   return `${day} ${MONTHS[monthIdx] || ''}`;
 }
 
-function calculateNights(checkIn, checkOut) {
-  if (!checkIn || !checkOut) return null;
-  const d1 = new Date(checkIn);
-  const d2 = new Date(checkOut);
-  const diffTime = d2 - d1;
-  const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
-  return diffDays > 0 ? diffDays : 1;
-}
-
-/**
- * Host Dashboard: dynamic tracking of room allocations across
- * Krishna Inn and SVPC (Wedding Convention).
- */
-function HostDashboard({
-  availability,
-  availabilityState,
-  onAvailabilityRefresh,
+export default function HostDashboard({
   onExit,
   onLogout,
   onSessionExpired,
 }) {
-  const [propertyId, setPropertyId] = useState(PROPERTIES[0].id);
-  const [bookings, setBookings] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [loadError, setLoadError] = useState('');
+  const [entries, setEntries] = useState([]);
+  const [activePropertyId, setActivePropertyId] = useState('all'); // 'all' | 'krishna-inn' | 'svpc'
+  const [statusFilter, setStatusFilter] = useState('all'); // 'all' | 'occupied' | 'vacant'
+  const [searchQuery, setSearchQuery] = useState('');
   const [toastMessage, setToastMessage] = useState('');
-  const [query, setQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all'); // 'all' | 'occupied' | 'available'
+
+  // Form State (Guest name, Guest Number, Room Num assigned, Calendar, Allocate & Vacant buttons)
+  const [editingId, setEditingId] = useState(null);
+  const [formPropertyId, setFormPropertyId] = useState('krishna-inn');
+  const [guestName, setGuestName] = useState('');
+  const [guestPhone, setGuestPhone] = useState('');
+  const [roomNumber, setRoomNumber] = useState('');
+  const [checkIn, setCheckIn] = useState('2026-12-12');
+  const [checkOut, setCheckOut] = useState('2026-12-13');
+  const [formError, setFormError] = useState('');
+  const [submitting, setSubmitting] = useState(false);
 
   // Dialog states
-  const [activeAllocationDialog, setActiveAllocationDialog] = useState(null); // { property, room, currentAllocation }
   const [showChangePin, setShowChangePin] = useState(false);
-  const [confirmClearDialog, setConfirmClearDialog] = useState(null); // { propertyId, room }
-  const [busyRoom, setBusyRoom] = useState(null);
-
-  const property = PROPERTIES.find((item) => item.id === propertyId) || PROPERTIES[0];
+  const [deleteConfirmId, setDeleteConfirmId] = useState(null);
 
   const showToast = (msg) => {
     setToastMessage(msg);
@@ -70,140 +55,153 @@ function HostDashboard({
     }, 3500);
   };
 
-  const loadAllBookings = useCallback(async () => {
+  const loadEntries = useCallback(() => {
     try {
-      const rows = await fetchBookings();
-      setBookings(rows);
-      setLoadError('');
-    } catch (error) {
-      if (isSessionExpired(error)) {
-        onSessionExpired();
-        return;
-      }
-      setLoadError((error && error.message) || 'Could not load allocations.');
-    } finally {
-      setLoading(false);
+      const data = fetchTrackerEntries();
+      setEntries(data);
+    } catch (err) {
+      console.error('Failed to load tracker entries:', err);
     }
-  }, [onSessionExpired]);
-
-  const refreshAll = useCallback(async () => {
-    await Promise.all([loadAllBookings(), onAvailabilityRefresh()]);
-  }, [loadAllBookings, onAvailabilityRefresh]);
+  }, []);
 
   useEffect(() => {
-    loadAllBookings();
+    loadEntries();
     const unsub = subscribeToDatabaseChanges(() => {
-      refreshAll();
+      loadEntries();
     });
-    return () => {
-      unsub();
-    };
-  }, [loadAllBookings, refreshAll]);
+    return () => unsub();
+  }, [loadEntries]);
 
-  // Map allocations for current property (1 to 8)
-  const roomAllocations = useMemo(() => {
-    const propBookings = bookings.filter((b) => b.property_id === propertyId);
-    return property.rooms.map((roomNumber) => {
-      const existing = propBookings.find(
-        (b) => String(b.room) === String(roomNumber)
+  // Sync form property when host selects a location tab
+  const handleLocationTabSelect = (propId) => {
+    setActivePropertyId(propId);
+    if (propId !== 'all') {
+      setFormPropertyId(propId);
+    }
+  };
+
+  // Metrics
+  const stats = useMemo(() => fetchTrackerStats(entries), [entries]);
+
+  // Filtered entries for tracker list/table
+  const filteredEntries = useMemo(() => {
+    const query = searchQuery.trim().toLowerCase();
+    return entries.filter((item) => {
+      // Location filter
+      if (activePropertyId !== 'all' && item.propertyId !== activePropertyId) {
+        return false;
+      }
+      // Status filter
+      if (statusFilter === 'occupied' && item.status !== 'occupied') return false;
+      if (statusFilter === 'vacant' && item.status !== 'vacant') return false;
+
+      // Search query
+      if (query) {
+        const matchName = String(item.guestName || '').toLowerCase().includes(query);
+        const matchPhone = String(item.guestPhone || '').toLowerCase().includes(query);
+        const matchRoom = String(item.roomNumber || '').toLowerCase().includes(query);
+        return matchName || matchPhone || matchRoom;
+      }
+      return true;
+    });
+  }, [entries, activePropertyId, statusFilter, searchQuery]);
+
+  // Reset form
+  const resetForm = () => {
+    setEditingId(null);
+    setGuestName('');
+    setGuestPhone('');
+    setRoomNumber('');
+    setCheckIn('2026-12-12');
+    setCheckOut('2026-12-13');
+    setFormError('');
+  };
+
+  // Start editing an entry
+  const handleStartEdit = (entry) => {
+    setEditingId(entry.id);
+    setFormPropertyId(entry.propertyId);
+    setGuestName(entry.guestName || '');
+    setGuestPhone(entry.guestPhone || '');
+    setRoomNumber(entry.roomNumber || '');
+    setCheckIn(entry.checkIn || '2026-12-12');
+    setCheckOut(entry.checkOut || '2026-12-13');
+    setFormError('');
+
+    // Scroll to form smoothly
+    const formEl = document.getElementById('acc-tracker-form');
+    if (formEl) {
+      formEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  };
+
+  // Handle Form Submission (Save with Allocate or Vacant)
+  const handleSubmitForm = async (targetStatus = 'occupied') => {
+    setFormError('');
+
+    if (!roomNumber.trim() && targetStatus === 'occupied') {
+      setFormError('Please enter the Room Number assigned.');
+      return;
+    }
+
+    if (!guestName.trim() && targetStatus === 'occupied') {
+      setFormError('Please enter the Guest Name.');
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      await saveTrackerEntry({
+        id: editingId,
+        propertyId: formPropertyId,
+        guestName: guestName.trim(),
+        guestPhone: guestPhone.trim(),
+        roomNumber: roomNumber.trim(),
+        checkIn,
+        checkOut,
+        status: targetStatus,
+      });
+
+      loadEntries();
+      showToast(
+        targetStatus === 'occupied'
+          ? `✓ Room ${roomNumber.trim()} allocated to ${guestName.trim()}!`
+          : `✓ Room ${roomNumber.trim() || 'entry'} marked as Vacant.`
       );
-      if (existing) return existing;
-      return {
-        id: `virtual_${propertyId}_${roomNumber}`,
-        property_id: propertyId,
-        room: String(roomNumber),
-        guest_name: '',
-        status: 'cancelled',
-        check_in: '2026-12-12',
-        check_out: '2026-12-13',
-        check_in_time: property.checkInTime || CHECK_IN_TIME,
-        check_out_time: property.checkOutTime || CHECK_OUT_TIME,
-      };
-    });
-  }, [bookings, property, propertyId]);
-
-  // Overall statistics
-  const overallStats = useMemo(() => {
-    const krishnaTotal = 8;
-    const svpcTotal = 8;
-
-    const krishnaOccupied = bookings.filter(
-      (b) => b.property_id === 'krishna-inn' && b.status === 'active'
-    ).length;
-
-    const svpcOccupied = bookings.filter(
-      (b) => b.property_id === 'svpc' && b.status === 'active'
-    ).length;
-
-    const totalOccupied = krishnaOccupied + svpcOccupied;
-    const totalRooms = krishnaTotal + svpcTotal;
-
-    return {
-      krishna: { occupied: krishnaOccupied, total: krishnaTotal, available: krishnaTotal - krishnaOccupied },
-      svpc: { occupied: svpcOccupied, total: svpcTotal, available: svpcTotal - svpcOccupied },
-      totalOccupied,
-      totalRooms,
-      totalAvailable: totalRooms - totalOccupied,
-    };
-  }, [bookings]);
-
-  // Filtered room cards
-  const filteredRooms = useMemo(() => {
-    const needle = query.trim().toLowerCase();
-    return roomAllocations.filter((item) => {
-      const isOccupied = item.status === 'active';
-      if (statusFilter === 'occupied' && !isOccupied) return false;
-      if (statusFilter === 'available' && isOccupied) return false;
-
-      if (!needle) return true;
-      const matchesName = String(item.guest_name || '').toLowerCase().includes(needle);
-      const matchesRoom = String(item.room).toLowerCase().includes(needle);
-      return matchesName || matchesRoom;
-    });
-  }, [roomAllocations, query, statusFilter]);
-
-  // Handler: Save allocation
-  const handleSaveAllocation = async (values) => {
-    try {
-      await saveRoomAllocation(values);
-      await refreshAll();
-      showToast(`Room ${values.room} allocated successfully!`);
+      resetForm();
     } catch (err) {
-      if (isSessionExpired(err)) onSessionExpired();
-      throw err;
-    }
-  };
-
-  // Handler: Free / Clear room
-  const handleClearRoom = async (propId, room) => {
-    try {
-      await clearRoomAllocation(propId, room);
-      await refreshAll();
-      showToast(`Room ${room} is now free and marked Available.`);
-    } catch (err) {
-      if (isSessionExpired(err)) onSessionExpired();
-      throw err;
-    }
-  };
-
-  // Handler: Toggle status
-  const handleToggleRoomStatus = async (room) => {
-    setBusyRoom(room);
-    try {
-      await toggleRoomStatus(propertyId, room);
-      await refreshAll();
-      showToast(`Room ${room} status updated!`);
-    } catch (err) {
-      if (isSessionExpired(err)) onSessionExpired();
-      showToast((err && err.message) || 'Failed to update status.');
+      setFormError((err && err.message) || 'Failed to save room entry.');
     } finally {
-      setBusyRoom(null);
+      setSubmitting(false);
     }
   };
 
-  // Handler: Copy WhatsApp Summary
-  const handleCopyWhatsAppSummary = async () => {
-    const summary = generateWhatsAppSummary();
+  // Toggle Entry status (Occupied <-> Vacant)
+  const handleToggleStatus = async (id, currentStatus, room) => {
+    try {
+      await toggleEntryStatus(id);
+      loadEntries();
+      const next = currentStatus === 'occupied' ? 'Vacant' : 'Occupied';
+      showToast(`Room ${room} is now marked ${next}.`);
+    } catch (err) {
+      showToast('Could not update status: ' + err.message);
+    }
+  };
+
+  // Delete Entry
+  const handleDeleteEntry = async (id) => {
+    try {
+      await deleteTrackerEntry(id);
+      loadEntries();
+      showToast('Entry removed from tracker.');
+    } catch (err) {
+      showToast('Could not delete entry: ' + err.message);
+    }
+  };
+
+  // Copy WhatsApp Summary
+  const handleCopyWhatsApp = async () => {
+    const summary = generateWhatsAppSummary(activePropertyId === 'all' ? null : activePropertyId);
     try {
       if (navigator.clipboard && navigator.clipboard.writeText) {
         await navigator.clipboard.writeText(summary);
@@ -215,31 +213,33 @@ function HostDashboard({
         document.execCommand('copy');
         document.body.removeChild(textarea);
       }
-      showToast('📋 WhatsApp allocation summary copied to clipboard!');
+      showToast('📋 WhatsApp allocation tracker summary copied!');
     } catch {
-      showToast('Could not auto-copy. Summary prepared.');
+      showToast('Summary prepared. Please copy manually.');
     }
   };
 
+  const selectedFormProperty = PROPERTIES.find((p) => p.id === formPropertyId) || PROPERTIES[0];
+
   return (
     <section className="acc-dash" aria-labelledby="acc-dash-title">
-      {/* Toast Notification */}
+      {/* Toast Alert */}
       {toastMessage && (
         <div className="acc-toast" role="status" aria-live="polite">
           {toastMessage}
         </div>
       )}
 
-      {/* Host Control Header */}
+      {/* Top Header */}
       <div className="acc-dash-head reveal">
         <div className="acc-dash-title-block">
           <div className="acc-host-badge-row">
-            <span className="acc-host-badge">👑 HOST DASHBOARD</span>
+            <span className="acc-host-badge">👑 HOST ROOM TRACKER</span>
             <span className="acc-live-pulse-badge">● Live Sync</span>
           </div>
-          <h2 id="acc-dash-title">Room Allocation Tracker</h2>
+          <h2 id="acc-dash-title">Accommodation Allocation Tracker</h2>
           <p className="acc-dash-sub">
-            Dynamically assign rooms, update guest names &amp; stay dates for the wedding day.
+            Reference tracker for guest room assignments across Krishna IN and SVPC Convention Hall 1.
           </p>
         </div>
 
@@ -247,8 +247,8 @@ function HostDashboard({
           <button
             type="button"
             className="acc-whatsapp-button"
-            onClick={handleCopyWhatsAppSummary}
-            title="Copy WhatsApp-formatted summary to paste into family or driver groups"
+            onClick={handleCopyWhatsApp}
+            title="Copy WhatsApp-formatted summary to paste into family groups"
           >
             📋 Copy WhatsApp Summary
           </button>
@@ -269,267 +269,411 @@ function HostDashboard({
         </div>
       </div>
 
-      {/* Master Overview Metric Card */}
+      {/* Overview Metrics Cards */}
       <div className="acc-metrics-strip reveal">
-        <div className="acc-metric-card is-primary">
-          <span className="acc-metric-label">Total Occupancy</span>
+        <div
+          className={`acc-metric-card is-primary${activePropertyId === 'all' ? ' is-active-location' : ''}`}
+          onClick={() => handleLocationTabSelect('all')}
+          role="button"
+          tabIndex={0}
+        >
+          <span className="acc-metric-label">All Locations</span>
           <span className="acc-metric-val">
-            {overallStats.totalOccupied} / {overallStats.totalRooms}
+            {stats.totalOccupied} <small>Occupied</small>
           </span>
           <span className="acc-metric-note">
-            {overallStats.totalAvailable} rooms available across all locations
+            {stats.totalVacant} vacated · {stats.totalEntries} total tracked
           </span>
         </div>
 
         <div
-          className={`acc-metric-card${propertyId === 'krishna-inn' ? ' is-active-location' : ''}`}
-          onClick={() => setPropertyId('krishna-inn')}
+          className={`acc-metric-card${activePropertyId === 'krishna-inn' ? ' is-active-location' : ''}`}
+          onClick={() => handleLocationTabSelect('krishna-inn')}
           role="button"
           tabIndex={0}
         >
-          <span className="acc-metric-label">Krishna Inn</span>
+          <span className="acc-metric-label">1. Krishna IN</span>
           <span className="acc-metric-val">
-            {overallStats.krishna.occupied} / 8 <small>Occupied</small>
+            {stats.krishna.occupied} <small>Occupied</small>
           </span>
           <span className="acc-metric-note">
-            {overallStats.krishna.available} available · Flexible Timings (12 Dec)
+            Flexible timings · 12 Dec 2026
           </span>
         </div>
 
         <div
-          className={`acc-metric-card${propertyId === 'svpc' ? ' is-active-location' : ''}`}
-          onClick={() => setPropertyId('svpc')}
+          className={`acc-metric-card${activePropertyId === 'svpc' ? ' is-active-location' : ''}`}
+          onClick={() => handleLocationTabSelect('svpc')}
           role="button"
           tabIndex={0}
         >
-          <span className="acc-metric-label">SVPC Convention Hall 1</span>
+          <span className="acc-metric-label">2. SVPC Convention Hall 1</span>
           <span className="acc-metric-val">
-            {overallStats.svpc.occupied} / 8 <small>Occupied</small>
+            {stats.svpc.occupied} <small>Occupied</small>
           </span>
           <span className="acc-metric-note">
-            {overallStats.svpc.available} available · 12 Dec 9 AM → 13 Dec 7 AM
+            Wedding Hall · 12 Dec 9 AM → 13 Dec 7 AM
           </span>
         </div>
       </div>
 
-      {/* Location Switcher Tabs */}
-      <div className="acc-dash-controls reveal">
-        <div className="acc-tabs" role="group" aria-label="Select stay location">
-          {PROPERTIES.map((item) => {
-            const isKrishna = item.id === 'krishna-inn';
-            const occ = isKrishna ? overallStats.krishna.occupied : overallStats.svpc.occupied;
-            return (
-              <button
-                key={item.id}
-                type="button"
-                className={`acc-tab${item.id === propertyId ? ' active' : ''}`}
-                aria-pressed={String(item.id === propertyId)}
-                onClick={() => {
-                  setPropertyId(item.id);
-                  setQuery('');
-                }}
-              >
-                <span>{item.name}</span>
-                <span className="acc-tab-badge">{occ}/8</span>
-              </button>
-            );
-          })}
-        </div>
-
-        {/* Timings Banner */}
-        <div className="acc-timings-strip">
-          {property.flexibleTimings ? (
-            <span className="acc-timing-item">🕒 <strong>Flexible Timings</strong> (12 Dec 2026)</span>
-          ) : (
-            <>
-              <span className="acc-timing-item">🕒 Check-in: <strong>{property.checkInTime}</strong></span>
-              <span className="acc-timing-separator">|</span>
-              <span className="acc-timing-item">🕚 Check-out: <strong>{property.checkOutTime}</strong></span>
-            </>
-          )}
-        </div>
-      </div>
-
-      {/* Search & Status Filter Toolbar */}
-      <div className="acc-toolbar reveal">
-        <label className="acc-search" htmlFor="dash-search">
-          <span className="acc-sr-only">Search by guest name or room number</span>
-          <span className="acc-search-icon" aria-hidden="true">
-            🔍
-          </span>
-          <input
-            id="dash-search"
-            type="search"
-            autoComplete="off"
-            placeholder="Search guest name or room (e.g. Sridhar, Room 4)"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-          />
-        </label>
-
-        <div className="acc-filter-pills" role="group" aria-label="Filter by status">
-          <button
-            type="button"
-            className={`acc-filter-pill${statusFilter === 'all' ? ' is-active' : ''}`}
-            onClick={() => setStatusFilter('all')}
-          >
-            All (8)
-          </button>
-          <button
-            type="button"
-            className={`acc-filter-pill is-occupied${statusFilter === 'occupied' ? ' is-active' : ''}`}
-            onClick={() => setStatusFilter('occupied')}
-          >
-            Occupied ({propertyId === 'krishna-inn' ? overallStats.krishna.occupied : overallStats.svpc.occupied})
-          </button>
-          <button
-            type="button"
-            className={`acc-filter-pill is-available${statusFilter === 'available' ? ' is-active' : ''}`}
-            onClick={() => setStatusFilter('available')}
-          >
-            Available ({propertyId === 'krishna-inn' ? overallStats.krishna.available : overallStats.svpc.available})
-          </button>
-        </div>
-      </div>
-
-      {loadError && (
-        <p className="acc-status-error" role="alert">
-          {loadError}
-        </p>
-      )}
-
-      {/* Dynamic Interactive Room Grid */}
-      <div className="acc-room-grid reveal">
-        {loading ? (
-          <div className="acc-empty">
-            <p>Loading allocations…</p>
+      {/* CREATE / EDIT ENTRY FORM (As requested by user) */}
+      <div id="acc-tracker-form" className="acc-tracker-form-card reveal">
+        <div className="acc-form-header">
+          <div>
+            <h3 className="acc-form-title">
+              {editingId ? '✏️ Edit Room Entry' : '➕ Create Entry for Room Allocation'}
+            </h3>
+            <p className="acc-form-subtitle">
+              Enter guest information upon arrival to track which room is assigned.
+            </p>
           </div>
-        ) : filteredRooms.length === 0 ? (
-          <div className="acc-empty">
-            <p>No rooms match your filter &ldquo;{query}&rdquo;.</p>
+          {editingId && (
             <button
               type="button"
               className="acc-ghost-button"
-              onClick={() => {
-                setQuery('');
-                setStatusFilter('all');
-              }}
+              onClick={resetForm}
             >
-              Clear filters
+              Cancel Edit
             </button>
+          )}
+        </div>
+
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            handleSubmitForm('occupied');
+          }}
+          className="acc-tracker-form"
+        >
+          {/* Stay Location Radio Switcher */}
+          <div className="acc-field acc-location-field">
+            <label className="acc-label">Select Stay Location:</label>
+            <div className="acc-location-radios" role="radiogroup">
+              {PROPERTIES.map((prop) => (
+                <button
+                  key={prop.id}
+                  type="button"
+                  role="radio"
+                  aria-checked={formPropertyId === prop.id}
+                  className={`acc-location-choice-btn${formPropertyId === prop.id ? ' is-selected' : ''}`}
+                  onClick={() => setFormPropertyId(prop.id)}
+                >
+                  <span className="acc-choice-radio" />
+                  <span className="acc-choice-text">{prop.name}</span>
+                </button>
+              ))}
+            </div>
+            <div className="acc-timing-hint">
+              {selectedFormProperty.flexibleTimings ? (
+                <span>🕒 <strong>Krishna IN:</strong> Flexible check-in / check-out on 12th Dec 2026</span>
+              ) : (
+                <span>🕒 <strong>SVPC Hall 1:</strong> 12 Dec 2026, 9:00 AM → 13 Dec 2026, 7:00 AM (Fixed)</span>
+              )}
+            </div>
           </div>
-        ) : (
-          filteredRooms.map((alloc) => {
-            const isOccupied = alloc.status === 'active';
-            const nights = calculateNights(alloc.check_in, alloc.check_out);
-            const isBusy = busyRoom === alloc.room;
 
-            return (
-              <div
-                key={alloc.room}
-                className={`acc-room-card${isOccupied ? ' is-occupied' : ' is-available'}`}
+          {/* Form Input Fields Grid */}
+          <div className="acc-form-row">
+            {/* Guest Name */}
+            <div className="acc-field">
+              <label htmlFor="tr-guest-name" className="acc-label">
+                Guest Name : <span className="acc-required">*</span>
+              </label>
+              <input
+                id="tr-guest-name"
+                type="text"
+                autoComplete="off"
+                placeholder="e.g. Ramesh family, Suresh Rao"
+                value={guestName}
+                onChange={(e) => setGuestName(e.target.value)}
+                required
+              />
+            </div>
+
+            {/* Guest Number (Phone) */}
+            <div className="acc-field">
+              <label htmlFor="tr-guest-number" className="acc-label">
+                Guest Number : <small>(Phone / WhatsApp)</small>
+              </label>
+              <input
+                id="tr-guest-number"
+                type="tel"
+                autoComplete="off"
+                placeholder="e.g. 9848012345"
+                value={guestPhone}
+                onChange={(e) => setGuestPhone(e.target.value)}
+              />
+            </div>
+
+            {/* Room Num Assigned */}
+            <div className="acc-field">
+              <label htmlFor="tr-room-num" className="acc-label">
+                Room Num Assigned : <span className="acc-required">*</span>
+              </label>
+              <input
+                id="tr-room-num"
+                type="text"
+                autoComplete="off"
+                placeholder="e.g. 101, 204, Room 4"
+                value={roomNumber}
+                onChange={(e) => setRoomNumber(e.target.value)}
+                required
+              />
+            </div>
+          </div>
+
+          {/* Calendar (Dates) */}
+          <div className="acc-form-row acc-dates-row">
+            <div className="acc-field">
+              <label htmlFor="tr-checkin" className="acc-label">
+                Calendar Check-in :
+              </label>
+              <input
+                id="tr-checkin"
+                type="date"
+                value={checkIn}
+                onChange={(e) => setCheckIn(e.target.value)}
+              />
+            </div>
+
+            <div className="acc-field">
+              <label htmlFor="tr-checkout" className="acc-label">
+                Calendar Check-out :
+              </label>
+              <input
+                id="tr-checkout"
+                type="date"
+                value={checkOut}
+                onChange={(e) => setCheckOut(e.target.value)}
+              />
+            </div>
+          </div>
+
+          {formError && (
+            <p className="acc-form-error" role="alert">
+              ⚠️ {formError}
+            </p>
+          )}
+
+          {/* Action Buttons: Allocate & Vacant Button */}
+          <div className="acc-form-actions-row">
+            <button
+              type="submit"
+              className="gold-button acc-allocate-btn"
+              disabled={submitting}
+              title="Save entry and mark as Occupied"
+            >
+              🔴 {editingId ? 'Update & Allocate' : 'Allocate Room'}
+            </button>
+
+            <button
+              type="button"
+              className="acc-vacant-btn"
+              disabled={submitting}
+              onClick={() => handleSubmitForm('vacant')}
+              title="Save or mark entry as Vacant / Available"
+            >
+              🟢 Mark as Vacant
+            </button>
+
+            {editingId && (
+              <button
+                type="button"
+                className="acc-ghost-button"
+                onClick={resetForm}
               >
-                {/* Room Card Top Row */}
-                <div className="acc-rc-head">
-                  <div className="acc-rc-number-wrap">
-                    <span className="acc-rc-number">{alloc.room}</span>
-                    <span className="acc-rc-tag">Room</span>
-                  </div>
-
-                  {/* Status Toggle Button */}
-                  <button
-                    type="button"
-                    className={`acc-rc-status-pill${isOccupied ? ' is-occupied' : ' is-available'}`}
-                    disabled={isBusy}
-                    onClick={() => handleToggleRoomStatus(alloc.room)}
-                    title="Tap to toggle between Occupied and Available"
-                  >
-                    <span className="acc-rc-dot" />
-                    <span>{isOccupied ? 'Occupied' : 'Available'}</span>
-                  </button>
-                </div>
-
-                {/* Guest Name Section */}
-                <div className="acc-rc-body">
-                  <span className="acc-rc-label">Guest Allocation:</span>
-                  <div className="acc-rc-guest">
-                    {isOccupied ? (
-                      <strong>{alloc.guest_name || 'Occupied (Name not set)'}</strong>
-                    ) : (
-                      <em className="acc-rc-vacant">Vacant / Available</em>
-                    )}
-                  </div>
-                </div>
-
-                {/* Stay Dates & Timings */}
-                <div className="acc-rc-dates">
-                  <div className="acc-rc-date-item">
-                    <span className="acc-rc-sublabel">Dates</span>
-                    <span className="acc-rc-date-val">
-                      {formatDateShort(alloc.check_in)} → {formatDateShort(alloc.check_out)}
-                      {nights ? ` (${nights}n)` : ''}
-                    </span>
-                  </div>
-                  <div className="acc-rc-timing-item">
-                    <span className="acc-rc-sublabel">Times</span>
-                    <span className="acc-rc-timing-val">
-                      {property.flexibleTimings ? 'Flexible' : `In ${property.checkInTime} · Out ${property.checkOutTime}`}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Dynamic Actions */}
-                <div className="acc-rc-actions">
-                  <button
-                    type="button"
-                    className="gold-button acc-rc-edit-btn"
-                    onClick={() =>
-                      setActiveAllocationDialog({
-                        property,
-                        room: alloc.room,
-                        currentAllocation: alloc,
-                      })
-                    }
-                  >
-                    ✏️ {isOccupied ? 'Edit Allocation' : 'Allocate Room'}
-                  </button>
-
-                  {isOccupied && (
-                    <button
-                      type="button"
-                      className="acc-rc-clear-btn"
-                      disabled={isBusy}
-                      onClick={() =>
-                        setConfirmClearDialog({
-                          propertyId,
-                          room: alloc.room,
-                          guestName: alloc.guest_name,
-                        })
-                      }
-                      title="Clear guest and mark Available"
-                    >
-                      Free Room
-                    </button>
-                  )}
-                </div>
-              </div>
-            );
-          })
-        )}
+                Clear
+              </button>
+            )}
+          </div>
+        </form>
       </div>
 
-      {/* Dynamic Room Allocation Dialog */}
-      {activeAllocationDialog && (
-        <RoomAllocationDialog
-          open={Boolean(activeAllocationDialog)}
-          property={activeAllocationDialog.property}
-          room={activeAllocationDialog.room}
-          currentAllocation={activeAllocationDialog.currentAllocation}
-          onClose={() => setActiveAllocationDialog(null)}
-          onSave={handleSaveAllocation}
-          onClear={handleClearRoom}
-        />
-      )}
+      {/* TRACKER ENTRIES LIST / TABLE */}
+      <div className="acc-tracker-section reveal">
+        <div className="acc-tracker-header">
+          <div>
+            <h3 className="acc-tracker-title">
+              Live Room Allocation Tracker ({filteredEntries.length})
+            </h3>
+            <p className="acc-tracker-subtitle">
+              Reference record of occupied and vacated rooms.
+            </p>
+          </div>
+
+          {/* Filter Pills */}
+          <div className="acc-filter-pills" role="group" aria-label="Filter status">
+            <button
+              type="button"
+              className={`acc-filter-pill${statusFilter === 'all' ? ' is-active' : ''}`}
+              onClick={() => setStatusFilter('all')}
+            >
+              All ({entries.length})
+            </button>
+            <button
+              type="button"
+              className={`acc-filter-pill is-occupied${statusFilter === 'occupied' ? ' is-active' : ''}`}
+              onClick={() => setStatusFilter('occupied')}
+            >
+              🔴 Occupied ({stats.totalOccupied})
+            </button>
+            <button
+              type="button"
+              className={`acc-filter-pill is-available${statusFilter === 'vacant' ? ' is-active' : ''}`}
+              onClick={() => setStatusFilter('vacant')}
+            >
+              🟢 Vacant ({stats.totalVacant})
+            </button>
+          </div>
+        </div>
+
+        {/* Search Bar */}
+        <div className="acc-search-bar">
+          <span className="acc-search-icon" aria-hidden="true">🔍</span>
+          <input
+            type="search"
+            autoComplete="off"
+            placeholder="Search by guest name, phone number, or room number..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+          {searchQuery && (
+            <button
+              type="button"
+              className="acc-search-clear"
+              onClick={() => setSearchQuery('')}
+              aria-label="Clear search"
+            >
+              ✕
+            </button>
+          )}
+        </div>
+
+        {/* Tracker Table / Cards */}
+        {filteredEntries.length === 0 ? (
+          <div className="acc-empty-tracker">
+            <span className="acc-empty-icon" aria-hidden="true">📭</span>
+            <h4>No room entries found</h4>
+            <p>
+              {searchQuery
+                ? `No entries match "${searchQuery}".`
+                : 'No room allocations recorded yet. Use the Create Entry form above to log guests as they arrive.'}
+            </p>
+          </div>
+        ) : (
+          <div className="acc-tracker-list">
+            {filteredEntries.map((entry) => {
+              const prop = PROPERTIES.find((p) => p.id === entry.propertyId) || PROPERTIES[0];
+              const isOccupied = entry.status === 'occupied';
+
+              return (
+                <div
+                  key={entry.id}
+                  className={`acc-tracker-card${isOccupied ? ' is-occupied' : ' is-vacant'}`}
+                >
+                  <div className="acc-card-main">
+                    {/* Room & Status */}
+                    <div className="acc-card-top-row">
+                      <div className="acc-card-room-badge">
+                        <span className="acc-room-label">ROOM</span>
+                        <strong className="acc-room-val">{entry.roomNumber}</strong>
+                      </div>
+
+                      <span className="acc-loc-pill">
+                        {prop.name}
+                      </span>
+
+                      <button
+                        type="button"
+                        className={`acc-status-tag${isOccupied ? ' is-occupied' : ' is-vacant'}`}
+                        onClick={() => handleToggleStatus(entry.id, entry.status, entry.roomNumber)}
+                        title="Click to toggle status between Occupied and Vacant"
+                      >
+                        <span className="acc-status-dot" />
+                        <span>{isOccupied ? 'Occupied' : 'Vacant'}</span>
+                      </button>
+                    </div>
+
+                    {/* Guest Name & Number */}
+                    <div className="acc-card-guest-info">
+                      <div className="acc-guest-name-row">
+                        <span className="acc-detail-label">Guest:</span>
+                        <strong className="acc-guest-name">
+                          {entry.guestName || <em className="acc-unnamed">Name not specified</em>}
+                        </strong>
+                      </div>
+
+                      {entry.guestPhone && (
+                        <div className="acc-guest-phone-row">
+                          <span className="acc-detail-label">Phone:</span>
+                          <span className="acc-phone-val">{entry.guestPhone}</span>
+                          <a
+                            href={`tel:${entry.guestPhone.replace(/[^\d+]/g, '')}`}
+                            className="acc-phone-action"
+                            title="Call guest"
+                          >
+                            📞 Call
+                          </a>
+                          <a
+                            href={`https://wa.me/${entry.guestPhone.replace(/[^\d]/g, '')}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="acc-phone-action is-whatsapp"
+                            title="Message on WhatsApp"
+                          >
+                            💬 WhatsApp
+                          </a>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Dates / Timings */}
+                    <div className="acc-card-dates-row">
+                      <span className="acc-dates-pill">
+                        📅 {formatDateShort(entry.checkIn)} → {formatDateShort(entry.checkOut)}
+                      </span>
+                      <span className="acc-timings-note">
+                        {prop.flexibleTimings
+                          ? 'Flexible Timings'
+                          : '12 Dec 9 AM → 13 Dec 7 AM'}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Actions */}
+                  <div className="acc-card-actions">
+                    <button
+                      type="button"
+                      className={`acc-card-btn${isOccupied ? ' is-vacate' : ' is-allocate'}`}
+                      onClick={() => handleToggleStatus(entry.id, entry.status, entry.roomNumber)}
+                    >
+                      {isOccupied ? 'Mark Vacant' : 'Mark Occupied'}
+                    </button>
+
+                    <button
+                      type="button"
+                      className="acc-card-btn is-edit"
+                      onClick={() => handleStartEdit(entry)}
+                    >
+                      ✏️ Edit
+                    </button>
+
+                    <button
+                      type="button"
+                      className="acc-card-btn is-delete"
+                      onClick={() => setDeleteConfirmId(entry.id)}
+                      title="Remove entry"
+                    >
+                      🗑️
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
 
       {/* Change Host PIN Dialog */}
       <ChangePinDialog
@@ -538,22 +682,21 @@ function HostDashboard({
         onSuccess={() => showToast('🔑 Host PIN updated successfully!')}
       />
 
-      {/* Confirm Free Room Dialog */}
-      {confirmClearDialog && (
+      {/* Confirm Delete Dialog */}
+      {deleteConfirmId && (
         <ConfirmDialog
-          open={Boolean(confirmClearDialog)}
-          title={`Free Room ${confirmClearDialog.room}?`}
-          message={`Are you sure you want to clear "${confirmClearDialog.guestName || 'guest'}" from Room ${confirmClearDialog.room} and mark it Available?`}
-          confirmLabel="Yes, Free Room"
+          open={Boolean(deleteConfirmId)}
+          title="Remove Room Entry?"
+          message="Are you sure you want to delete this room allocation entry from the tracker?"
+          confirmLabel="Yes, Delete"
           cancelLabel="Cancel"
           onConfirm={async () => {
-            await handleClearRoom(confirmClearDialog.propertyId, confirmClearDialog.room);
+            await handleDeleteEntry(deleteConfirmId);
+            setDeleteConfirmId(null);
           }}
-          onClose={() => setConfirmClearDialog(null)}
+          onClose={() => setDeleteConfirmId(null)}
         />
       )}
     </section>
   );
 }
-
-export default HostDashboard;

@@ -1,26 +1,18 @@
 import { useCallback, useEffect, useState } from 'react';
-import { PROPERTIES, getProperty } from '../data/accommodation';
+import { PROPERTIES } from '../data/accommodation';
 import {
   bookingConfigured,
-  fetchAvailability,
   isHostLoggedIn,
   logoutHost,
   restoreHostSession,
-  subscribeToDatabaseChanges,
 } from '../data/bookingStore';
-import { HostLoginDialog, RoomStatusLight } from './BookingControls';
+import { HostLoginDialog } from './BookingControls';
 import HostDashboard from './HostDashboard';
 import MusicToggle from './MusicToggle';
 import useScrollReveal from '../hooks/useScrollReveal';
 import useWeddingMusic from '../hooks/useWeddingMusic';
 import '../styles/accommodation.css';
 import '../styles/booking.css';
-
-/** Property id encoded in the URL hash (e.g. /accommodation#svpc), if valid. */
-function propertyFromHash() {
-  const id = window.location.hash.replace(/^#/, '');
-  return getProperty(id) ? id : PROPERTIES[0].id;
-}
 
 /* ---------- decorative floral divider ---------- */
 function Ornament({ className = '' }) {
@@ -187,7 +179,6 @@ function Accommodation({
 } = {}) {
   const [homeHref, setHomeHref] = useState(getHomeHref);
   const [internalDark, setInternalDark] = useState(getStoredTheme);
-  const [selectedId, setSelectedId] = useState(propertyFromHash);
 
   const isDark = externalIsDark !== undefined ? externalIsDark : internalDark;
   const toggleTheme =
@@ -233,26 +224,12 @@ function Accommodation({
     [onBackToInvitation, audioRef]
   );
 
-  // Availability state
-  const [availability, setAvailability] = useState(null);
-  const [availabilityError, setAvailabilityError] = useState('');
-
-  // Host session
+  // Host session & views
   const [showLogin, setShowLogin] = useState(false);
   const [hostLoggedIn, setHostLoggedIn] = useState(isHostLoggedIn);
   const [dashboardOpen, setDashboardOpen] = useState(false);
 
-  const selectedProperty = getProperty(selectedId) || PROPERTIES[0];
-  const viewKey = dashboardOpen ? 'dashboard' : selectedId || 'overview';
-
-  const availabilityState = !bookingConfigured
-    ? 'off'
-    : availability
-      ? 'ready'
-      : availabilityError
-        ? 'error'
-        : 'loading';
-
+  const viewKey = dashboardOpen ? 'dashboard' : 'overview';
   useScrollReveal(viewKey);
 
   useEffect(() => {
@@ -277,36 +254,6 @@ function Accommodation({
     };
   }, []);
 
-  // Sync hash
-  useEffect(() => {
-    const syncFromHash = () => setSelectedId(propertyFromHash());
-    window.addEventListener('popstate', syncFromHash);
-    return () => window.removeEventListener('popstate', syncFromHash);
-  }, []);
-
-  const loadAvailability = useCallback(async () => {
-    if (!bookingConfigured) return;
-    try {
-      const map = await fetchAvailability();
-      setAvailability(map);
-      setAvailabilityError('');
-    } catch (error) {
-      setAvailabilityError((error && error.message) || 'Room availability is temporarily unavailable.');
-    }
-  }, []);
-
-  useEffect(() => {
-    loadAvailability();
-    const unsub = subscribeToDatabaseChanges(() => {
-      loadAvailability();
-    });
-    const timer = setInterval(loadAvailability, 15000);
-    return () => {
-      unsub();
-      clearInterval(timer);
-    };
-  }, [loadAvailability]);
-
   // Restore host session
   useEffect(() => {
     let cancelled = false;
@@ -321,29 +268,10 @@ function Accommodation({
     };
   }, []);
 
-  const countsFor = useCallback(
-    (property) => {
-      const total = property.rooms.length;
-      if (availabilityState !== 'ready') return { total, booked: null, available: null };
-      const map = availability ? availability[property.id] || {} : {};
-      const booked = property.rooms.filter((room) => map[room]).length;
-      return { total, booked, available: total - booked };
-    },
-    [availability, availabilityState]
-  );
-
-  const handleSelectLocation = (id) => {
-    if (window.location.hash !== `#${id}`) {
-      window.history.pushState(null, '', `#${id}`);
-    }
-    setSelectedId(id);
-  };
-
   const handleLoginSuccess = () => {
     setShowLogin(false);
     setHostLoggedIn(true);
     setDashboardOpen(true);
-    loadAvailability();
   };
 
   const handleLogout = async () => {
@@ -404,7 +332,7 @@ function Accommodation({
               className="acc-host-link is-active-mode"
               onClick={() => setDashboardOpen(true)}
             >
-              👑 Host Dashboard
+              👑 Host Tracker
             </button>
           )}
 
@@ -451,12 +379,9 @@ function Accommodation({
           <Ornament />
         </section>
 
-        {/* HOST DASHBOARD VIEW */}
+        {/* HOST TRACKER DASHBOARD VIEW */}
         {dashboardOpen && hostLoggedIn ? (
           <HostDashboard
-            availability={availability}
-            availabilityState={availabilityState}
-            onAvailabilityRefresh={loadAvailability}
             onExit={() => setDashboardOpen(false)}
             onLogout={handleLogout}
             onSessionExpired={handleSessionExpired}
@@ -470,129 +395,59 @@ function Accommodation({
             </div>
 
             <div className="acc-venues-showcase reveal">
-              {PROPERTIES.map((property, idx) => {
-                const counts = countsFor(property);
-                const isSelected = selectedProperty.id === property.id;
-                return (
-                  <div
-                    key={property.id}
-                    className={`acc-showcase-card${isSelected ? ' is-active-venue' : ''}`}
-                    onClick={() => handleSelectLocation(property.id)}
-                    role="button"
-                    tabIndex={0}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' || e.key === ' ') {
-                        e.preventDefault();
-                        handleSelectLocation(property.id);
-                      }
-                    }}
-                  >
-                    <div className="acc-showcase-art">
-                      <StayArt variant={property.id} uid={`showcase-${property.id}`} />
-                    </div>
-
-                    <div className="acc-showcase-head">
-                      <span className="acc-showcase-num-badge">
-                        {idx === 0 ? '1. Family & Guests Stay' : '2. Wedding Hall Stay'}
-                      </span>
-                      <h2 className="acc-showcase-title">{property.name}</h2>
-                      <p className="acc-showcase-blurb">{property.blurb}</p>
-                      {property.address && (
-                        <p className="acc-showcase-address">📍 {property.address}</p>
-                      )}
-                    </div>
-
-                    <div className="acc-showcase-timing">
-                      {property.flexibleTimings ? (
-                        <span>
-                          🕒 <strong>Flexible Timings</strong> · {property.dateLabel}
-                        </span>
-                      ) : (
-                        <span>
-                          🕒 <strong>{property.timingNote}</strong>
-                        </span>
-                      )}
-                    </div>
-
-                    <div className="acc-showcase-actions">
-                      {property.mapUrl && (
-                        <a
-                          className="gold-button acc-showcase-map-link"
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          href={property.mapUrl}
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          📍 Google Maps
-                        </a>
-                      )}
-                      <span className="acc-showcase-select-pill">
-                        {isSelected ? `✓ Viewing Rooms (${counts.available ?? property.rooms.length} available)` : 'Tap to View Rooms →'}
-                      </span>
-                    </div>
+              {PROPERTIES.map((property, idx) => (
+                <div
+                  key={property.id}
+                  className="acc-showcase-card is-public-card"
+                >
+                  <div className="acc-showcase-art">
+                    <StayArt variant={property.id} uid={`showcase-${property.id}`} />
                   </div>
-                );
-              })}
+
+                  <div className="acc-showcase-head">
+                    <span className="acc-showcase-num-badge">
+                      {idx === 0 ? '1. Family & Guests Stay' : '2. Wedding Hall Stay'}
+                    </span>
+                    <h2 className="acc-showcase-title">{property.name}</h2>
+                    <p className="acc-showcase-blurb">{property.blurb}</p>
+                    {property.address && (
+                      <p className="acc-showcase-address">📍 {property.address}</p>
+                    )}
+                  </div>
+
+                  <div className="acc-showcase-timing">
+                    {property.flexibleTimings ? (
+                      <span>
+                        🕒 <strong>Flexible Timings</strong> · {property.dateLabel}
+                      </span>
+                    ) : (
+                      <span>
+                        🕒 <strong>{property.timingNote}</strong>
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="acc-showcase-actions">
+                    {property.mapUrl && (
+                      <a
+                        className="gold-button acc-showcase-map-link"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        href={property.mapUrl}
+                      >
+                        📍 Open in Google Maps
+                      </a>
+                    )}
+                  </div>
+                </div>
+              ))}
             </div>
 
-            {/* Room Availability Grid (Privacy-Preserving) */}
-            <div className="acc-panel reveal">
-              <div className="acc-panel-head">
-                <h3 className="acc-panel-title">Room Availability · {selectedProperty.name}</h3>
-                <span className="acc-privacy-pill">🔒 Guest Details Private</span>
-              </div>
-
-              <div className="acc-public-rooms-grid">
-                {selectedProperty.rooms.map((room) => {
-                  const isBooked = Boolean(
-                    availability &&
-                    availability[selectedProperty.id] &&
-                    availability[selectedProperty.id][room]
-                  );
-
-                  return (
-                    <div
-                      key={room}
-                      className={`acc-public-room-tile${isBooked ? ' is-occupied' : ' is-available'}`}
-                    >
-                      <div className="acc-tile-room-header">
-                        <span className="acc-tile-room-num">Room {room}</span>
-                        <RoomStatusLight
-                          loaded={availabilityState === 'ready'}
-                          unavailable={availabilityState === 'error'}
-                          booked={isBooked}
-                        />
-                      </div>
-                      <div className="acc-tile-timings">
-                        {selectedProperty.flexibleTimings ? (
-                          <>
-                            <span>12 Dec 2026</span>
-                            <span>Flexible Timings</span>
-                          </>
-                        ) : (
-                          <>
-                            <span>In: 12 Dec, 9:00 AM</span>
-                            <span>Out: 13 Dec, 7:00 AM</span>
-                          </>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-
-              {availabilityError && (
-                <p className="acc-status-error" role="status">
-                  {availabilityError}
-                </p>
-              )}
-            </div>
-
-            {/* Privacy & Host Note */}
+            {/* Guest Assistance & Host Login Prompt */}
             <div className="acc-guest-footer-note reveal">
               <p>
-                Guest allocations and names are kept private for security. For queries, room assistance,
-                or early check-in, please contact the wedding coordinators directly.
+                Comfortable stay arranged for our beloved family and wedding guests at both locations.
+                For room assistance, arrival coordination, or queries, please contact the wedding coordinators or host.
               </p>
               {!hostLoggedIn && (
                 <button
@@ -600,7 +455,7 @@ function Accommodation({
                   className="acc-host-login-prompt"
                   onClick={() => setShowLogin(true)}
                 >
-                  Are you the wedding host? Tap here to manage allocations →
+                  👑 Are you the wedding host? Tap here to open the Room Allocation Tracker →
                 </button>
               )}
             </div>
