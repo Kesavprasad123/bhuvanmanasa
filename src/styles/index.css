@@ -2163,30 +2163,87 @@
     top: 42%;
     transform: translate(-50%, -50%);
     width: 90%;
-    max-width: 1000px;
+    max-width: 960px;
     text-align: center;
-    color: white;
+    color: #ffffff;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
   }
 
-  .feature-copy p {
-    font-family: "Playfair Display", serif;
+  .feature-copy .feature-eyebrow {
+    font-family: "Playfair Display", "Noto Serif Telugu", "Noto Serif Tamil", "Noto Serif Malayalam", "Noto Serif Devanagari", serif;
+    font-size: clamp(12px, 2.2vw, 15px);
     letter-spacing: 5px;
+    text-transform: uppercase;
     margin: 0 0 12px;
+    color: #f7e6ce;
+    text-shadow: 0 2px 12px rgba(0, 0, 0, .55);
   }
 
-  .feature-copy h2 {
-    font-family: "Great Vibes", cursive;
-    font-size: clamp(65px, 9vw, 110px);
-    font-weight: 400;
+  .feature-copy.is-indic .feature-eyebrow {
+    letter-spacing: 2px;
+  }
+
+  .feature-copy .feature-names {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: nowrap;
+    gap: clamp(12px, 2.5vw, 24px);
+    margin: 4px 0;
     line-height: 1;
-    margin: 0
+    font-family: "Great Vibes", cursive;
+    font-size: clamp(48px, 8.5vw, 98px);
+    font-weight: 400;
+    color: #ffffff;
+    text-shadow: 0 4px 24px rgba(0, 0, 0, .6);
+    white-space: nowrap;
   }
 
-  .feature-copy span {
+  .feature-copy.is-indic .feature-names {
+    font-family: "Noto Serif Telugu", "Noto Serif Tamil", "Noto Serif Malayalam", "Noto Serif Devanagari", "Playfair Display", serif;
+    font-size: clamp(30px, 5.5vw, 64px);
+    font-weight: 600;
+    gap: clamp(10px, 2vw, 18px);
+  }
+
+  .feature-copy .feature-name {
+    display: inline-block;
+    line-height: 1.1;
+    letter-spacing: normal;
+    margin: 0;
+  }
+
+  .feature-copy .feature-heart {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-family: "Cormorant Garamond", serif;
+    font-size: 0.38em;
+    font-style: normal;
+    font-weight: normal;
+    color: #f4d79c;
+    line-height: 1;
+    margin: 0;
+    transform: translateY(-0.06em);
+    text-shadow: 0 0 16px rgba(244, 215, 156, .7);
+    flex-shrink: 0;
+  }
+
+  .feature-copy .feature-date {
     display: block;
-    font-family: "Playfair Display", serif;
+    font-family: "Playfair Display", "Noto Serif Telugu", serif;
+    font-size: clamp(13px, 2.2vw, 19px);
     letter-spacing: 5px;
-    margin-top: 15px;
+    margin-top: 14px;
+    color: #fbf0df;
+    text-shadow: 0 2px 10px rgba(0, 0, 0, .5);
+  }
+
+  .feature-copy.is-indic .feature-date {
+    letter-spacing: 3px;
   }
 
   .reveal {
@@ -3066,7 +3123,30 @@
     }
 
     .feature-copy {
-      top: 36%;
+      top: 38%;
+      width: 95%;
+    }
+
+    .feature-copy .feature-names {
+      font-size: clamp(34px, 8.5vw, 54px);
+      gap: 12px;
+    }
+
+    .feature-copy.is-indic .feature-names {
+      font-size: clamp(24px, 6.2vw, 42px);
+      gap: 10px;
+    }
+
+    .feature-copy .feature-eyebrow {
+      letter-spacing: 3px;
+      font-size: 12px;
+      margin-bottom: 8px;
+    }
+
+    .feature-copy .feature-date {
+      font-size: 14px;
+      letter-spacing: 3px;
+      margin-top: 10px;
     }
 
     .venue-card {
