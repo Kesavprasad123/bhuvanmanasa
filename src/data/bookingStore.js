@@ -16,7 +16,7 @@
  *   plus local persistent storage with cross-tab BroadcastChannel synchronization.
  */
 
-import { CHECK_IN_TIME, CHECK_OUT_TIME, PROPERTIES } from './accommodation';
+import { CHECK_IN_TIME, CHECK_OUT_TIME, PROPERTIES } from './accommodation.js';
 
 const env = typeof import.meta !== 'undefined' && import.meta.env ? import.meta.env : {};
 const SUPABASE_URL = String(env.VITE_SUPABASE_URL || '').replace(/\/+$/, '');
