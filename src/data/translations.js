@@ -9,14 +9,14 @@
  */
 
 export const SUPPORTED_LANGUAGES = [
-  { code: 'te', label: 'తెలుగు', name: 'Telugu', flag: '🪷' },
   { code: 'en', label: 'English', name: 'English', flag: '✨' },
+  { code: 'te', label: 'తెలుగు', name: 'Telugu', flag: '🪷' },
   { code: 'ta', label: 'தமிழ்', name: 'Tamil', flag: '🪔' },
   { code: 'ml', label: 'മലയാളം', name: 'Malayalam', flag: '🥥' },
   { code: 'hi', label: 'हिन्दी', name: 'Hindi', flag: '🕉️' },
 ];
 
-export const DEFAULT_LANGUAGE = 'te';
+export const DEFAULT_LANGUAGE = 'en';
 
 export const translations = {
   te: {

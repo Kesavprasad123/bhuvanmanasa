@@ -64,7 +64,7 @@ export function LanguageProvider({ children, initialLanguage = null }) {
       }
       if (current !== undefined) return current;
 
-      // 2. Fall back to default language (Telugu)
+      // 2. Fall back to default language (English)
       if (language !== DEFAULT_LANGUAGE) {
         let defCurrent = translations[DEFAULT_LANGUAGE];
         for (const k of keys) {
