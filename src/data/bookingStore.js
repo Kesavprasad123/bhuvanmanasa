@@ -93,6 +93,14 @@ function cleanOldStorage() {
       localStorage.setItem(HOST_PIN_KEY, DEFAULT_HOST_PIN);
     }
 
+    // Always wipe persistent session tokens so refreshing the page automatically logs out
+    try {
+      if (typeof localStorage !== 'undefined') localStorage.removeItem(SESSION_STORAGE_KEY);
+      if (typeof sessionStorage !== 'undefined') sessionStorage.removeItem(SESSION_STORAGE_KEY);
+    } catch {
+      // ignore
+    }
+
     // Force purge all empty entries from storage immediately
     const raw = localStorage.getItem(TRACKER_STORAGE_KEY);
     if (raw) {
@@ -205,27 +213,19 @@ export function subscribeToDatabaseChanges(callback) {
 
 /* ---------------------------------------------------------------- Session Management */
 
+// In-memory host session token (does NOT persist across page refreshes)
+let activeHostSessionToken = '';
+
 function readSession() {
-  try {
-    const local = typeof localStorage !== 'undefined' ? localStorage.getItem(SESSION_STORAGE_KEY) : '';
-    if (local && local.startsWith('host_session_')) return local;
-    const session = typeof sessionStorage !== 'undefined' ? sessionStorage.getItem(SESSION_STORAGE_KEY) : '';
-    if (session && session.startsWith('host_session_')) return session;
-    return '';
-  } catch {
-    return '';
-  }
+  return activeHostSessionToken;
 }
 
 function writeSession(token) {
+  activeHostSessionToken = token ? String(token) : '';
+  // Force wipe persistent storage to guarantee page refresh always logs out
   try {
-    if (token) {
-      if (typeof localStorage !== 'undefined') localStorage.setItem(SESSION_STORAGE_KEY, token);
-      if (typeof sessionStorage !== 'undefined') sessionStorage.setItem(SESSION_STORAGE_KEY, token);
-    } else {
-      if (typeof localStorage !== 'undefined') localStorage.removeItem(SESSION_STORAGE_KEY);
-      if (typeof sessionStorage !== 'undefined') sessionStorage.removeItem(SESSION_STORAGE_KEY);
-    }
+    if (typeof localStorage !== 'undefined') localStorage.removeItem(SESSION_STORAGE_KEY);
+    if (typeof sessionStorage !== 'undefined') sessionStorage.removeItem(SESSION_STORAGE_KEY);
   } catch {
     // ignore
   }
@@ -256,12 +256,8 @@ export async function logoutHost() {
 }
 
 export async function restoreHostSession() {
-  const token = readSession();
-  if (token && token.startsWith('host_session_')) {
-    return token;
-  }
-  writeSession('');
-  return '';
+  // Resets to empty/logged-out on refresh
+  return activeHostSessionToken;
 }
 
 export function isSessionExpired(error) {
