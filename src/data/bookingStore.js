@@ -246,7 +246,7 @@ export async function saveTrackerEntry({
 }) {
   const cleanName = String(guestName || '').trim();
   const cleanRoom = String(roomNumber || '').trim();
-  const cleanPhone = String(guestPhone || '').trim();
+  const cleanPhone = String(guestPhone || '').replace(/\D/g, '').slice(0, 10);
   const cleanStatus = status === 'vacant' ? 'vacant' : 'occupied';
 
   if (!cleanRoom && cleanStatus === 'occupied') {

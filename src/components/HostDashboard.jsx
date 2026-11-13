@@ -170,6 +170,11 @@ export default function HostDashboard({
       return;
     }
 
+    if (guestPhone.trim() && guestPhone.trim().length !== 10) {
+      setFormError('Please enter a valid 10-digit mobile number.');
+      return;
+    }
+
     setSubmitting(true);
     try {
       await saveTrackerEntry({
@@ -440,15 +445,22 @@ export default function HostDashboard({
               {/* Guest Number (Phone) */}
               <div className="acc-field">
                 <label htmlFor="tr-guest-number" className="acc-label">
-                  Guest Number : <small>(Phone / WhatsApp)</small>
+                  Guest Number : <small>(10-Digit Mobile / WhatsApp)</small>
                 </label>
                 <input
                   id="tr-guest-number"
                   type="tel"
+                  inputMode="numeric"
                   autoComplete="off"
-                  placeholder="e.g. 9848012345"
+                  maxLength={10}
+                  pattern="[0-9]{10}"
+                  placeholder="e.g. 9848012345 (10 digits)"
                   value={guestPhone}
-                  onChange={(e) => setGuestPhone(e.target.value)}
+                  onChange={(e) => {
+                    const digits = e.target.value.replace(/\D/g, '').slice(0, 10);
+                    setGuestPhone(digits);
+                    if (formError) setFormError('');
+                  }}
                 />
               </div>
 
