@@ -102,16 +102,25 @@ function App({ initialRoute = null }) {
     }
   }, []);
 
-  // Idle prefetch components
+  // Idle prefetch: prioritize MainInvitation immediately on initial envelope screen
   useEffect(() => {
-    const idleCallback = window.requestIdleCallback || ((cb) => setTimeout(cb, 800));
+    const idleCallback = window.requestIdleCallback || ((cb) => setTimeout(cb, 250));
     const id = idleCallback(() => {
       loadMainInvitation();
+    });
+    return () => (window.cancelIdleCallback ? window.cancelIdleCallback(id) : null);
+  }, []);
+
+  // Defer subpages prefetching until AFTER the main invitation is open and guest is browsing
+  useEffect(() => {
+    if (!isOpen) return;
+    const idleCallback = window.requestIdleCallback || ((cb) => setTimeout(cb, 2500));
+    const id = idleCallback(() => {
       loadAccommodation();
       loadGallery();
     });
     return () => (window.cancelIdleCallback ? window.cancelIdleCallback(id) : null);
-  }, []);
+  }, [isOpen]);
 
   // Scroll reveal
   useScrollReveal(isOpen);
@@ -231,10 +240,37 @@ function App({ initialRoute = null }) {
         </Suspense>
       ) : (
         <>
-          <Opening isOpen={isOpen} onOpen={handleOpenEnvelope} />
+          <Opening isOpen={isOpen} onOpen={handleOpenEnvelope} onPrefetch={loadMainInvitation} />
 
           {isOpen && (
-            <Suspense fallback={null}>
+            <Suspense
+              fallback={
+                <div
+                  className="main-invite-loading-screen"
+                  style={{
+                    minHeight: '100vh',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    background: 'linear-gradient(135deg, #fbf1e6, #f5e7dc)',
+                    color: '#7d2c40',
+                    fontFamily: '"Playfair Display", serif',
+                    gap: '12px',
+                    padding: '24px',
+                    textAlign: 'center',
+                  }}
+                >
+                  <div style={{ fontSize: '36px' }} aria-hidden="true">ॐ</div>
+                  <div style={{ fontSize: '20px', letterSpacing: '2px', fontWeight: 600 }}>
+                    Bhuvan &amp; Manasa
+                  </div>
+                  <div style={{ fontSize: '13.5px', color: '#68594e', fontStyle: 'italic', letterSpacing: '1px' }}>
+                    12 December 2026 · Rajamahendravaram
+                  </div>
+                </div>
+              }
+            >
               <MainInvitation
                 musicPlaying={musicPlaying}
                 onToggleMusic={toggleMusic}

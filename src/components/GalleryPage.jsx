@@ -14,6 +14,7 @@ export const WEDDING_VIDEOS = [
     teluguTitle: 'పెళ్ళికొడుకు ఆగమనం',
     subtitle: 'The magnificent first look of Bhuvan as the groom — dressed in regal tradition.',
     src: asset('videos/Bhuvan_Manasa_Groom_First_Full_HD.mp4'),
+    poster: asset('assets/pellikoduku.webp'),
     badge: 'Groom First Look',
     category: 'videos',
     duration: 'Full HD',
@@ -24,6 +25,7 @@ export const WEDDING_VIDEOS = [
     teluguTitle: 'సినీమాటిక్ వెడ్డింగ్ ఇన్విటేషన్',
     subtitle: 'A grand cinematic presentation celebrating love and sacred traditions.',
     src: asset('videos/Bhuvan_Manasa_Cinema_Invitation_Clean_Full_HD.mp4'),
+    poster: asset('assets/weddding1.webp'),
     badge: 'Cinematic Film',
     category: 'videos',
     duration: 'Full HD',
@@ -34,6 +36,7 @@ export const WEDDING_VIDEOS = [
     teluguTitle: 'వివాహ వేడుకల యానిమేషన్ చిత్రం',
     subtitle: 'Delightful animation walk-through of the seven sacred wedding festivities.',
     src: asset('videos/Bhuvan_Manasa_Wedding_Events_Clean_Full_HD.mp4'),
+    poster: asset('assets/wedding.webp'),
     badge: 'Events Animation',
     category: 'videos',
     duration: 'Full HD',
@@ -44,6 +47,7 @@ export const WEDDING_VIDEOS = [
     teluguTitle: 'కుటుంబ ఆశీర్వాదాలు',
     subtitle: 'A heartfelt invitation and auspicious blessings from both families.',
     src: asset('videos/Teja_Manasa_Telugu_Corrected_HD.mp4'),
+    poster: asset('assets/Card.webp'),
     badge: 'Family Invitation',
     category: 'videos',
     duration: 'Full HD',
@@ -478,10 +482,11 @@ function GalleryPage({
                         videoRefs.current[vid.id] = el;
                       }}
                       src={vid.src}
+                      poster={vid.poster}
                       playsInline
                       webkit-playsinline="true"
                       x5-playsinline="true"
-                      preload="metadata"
+                      preload="none"
                       controls
                       onPlay={() => handleVideoPlay(vid.id)}
                       onPause={() => handleVideoPauseOrEnd(vid.id)}

@@ -19,7 +19,7 @@ const STATIC_BLAST = [
   { x: '-130px', y: '75px', size: '15px', color: '#d99aa3', delay: '.03s', symbol: '❁' },
 ];
 
-function Opening({ isOpen: siteOpen, onOpen }) {
+function Opening({ isOpen: siteOpen, onOpen, onPrefetch }) {
   const [envelopeOpen, setEnvelopeOpen] = useState(false);
   const [exiting, setExiting] = useState(false);
   const [hidden, setHidden] = useState(false);
@@ -104,6 +104,8 @@ function Opening({ isOpen: siteOpen, onOpen }) {
           aria-label="Open wedding invitation"
           onClick={handleTriggerOpen}
           onTouchEnd={handleTriggerOpen}
+          onPointerDown={onPrefetch}
+          onMouseEnter={onPrefetch}
           style={{ touchAction: 'manipulation' }}
         >
           <div className="letter">
@@ -179,6 +181,8 @@ function Opening({ isOpen: siteOpen, onOpen }) {
           className="tap-hint"
           onClick={handleTriggerOpen}
           onTouchEnd={handleTriggerOpen}
+          onPointerDown={onPrefetch}
+          onMouseEnter={onPrefetch}
           style={{ cursor: 'pointer', touchAction: 'manipulation' }}
         >
           Tap the envelope to open our invitation
