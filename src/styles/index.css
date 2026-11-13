@@ -3773,6 +3773,16 @@
     margin: 0;
   }
 
+  html:not([lang="en"]) .scratch-names,
+  html[lang="te"] .scratch-names,
+  html[lang="ta"] .scratch-names,
+  html[lang="ml"] .scratch-names,
+  html[lang="hi"] .scratch-names {
+    font-family: "Noto Serif Telugu", "Noto Serif Tamil", "Noto Serif Malayalam", "Noto Serif Devanagari", "Playfair Display", serif;
+    font-size: clamp(24px, 5.2vw, 38px);
+    font-weight: 600;
+  }
+
   .scratch-heart {
     font-size: .52em;
     vertical-align: middle;
@@ -3788,6 +3798,16 @@
     margin: 10px 0 0;
   }
 
+  html:not([lang="en"]) .scratch-date,
+  html[lang="te"] .scratch-date,
+  html[lang="ta"] .scratch-date,
+  html[lang="ml"] .scratch-date,
+  html[lang="hi"] .scratch-date {
+    font-family: "Noto Serif Telugu", "Noto Serif Tamil", "Noto Serif Malayalam", "Noto Serif Devanagari", "Playfair Display", serif;
+    letter-spacing: 1px;
+    font-size: clamp(15px, 2.8vw, 22px);
+  }
+
   .scratch-time {
     font-family: "Playfair Display", serif;
     font-weight: 600;
@@ -3795,6 +3815,16 @@
     letter-spacing: 4px;
     color: #a9761f;
     margin: 7px 0 0;
+  }
+
+  html:not([lang="en"]) .scratch-time,
+  html[lang="te"] .scratch-time,
+  html[lang="ta"] .scratch-time,
+  html[lang="ml"] .scratch-time,
+  html[lang="hi"] .scratch-time {
+    font-family: "Noto Serif Telugu", "Noto Serif Tamil", "Noto Serif Malayalam", "Noto Serif Devanagari", "Playfair Display", serif;
+    letter-spacing: 1px;
+    font-size: clamp(13px, 2.2vw, 16px);
   }
 
   /* --- gold coating --- */

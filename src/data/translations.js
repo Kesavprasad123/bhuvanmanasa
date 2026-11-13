@@ -353,7 +353,7 @@ export const translations = {
       cardFoilText: '!! scratch here !!',
       names: 'Bhuvan 🩷 Manasa',
       revealedDate: '12 December 2026',
-      revealedTime: '8:26 PM IST (Muhurtham)',
+      revealedTime: '8:26 PM IST',
       counting: 'Counting Every Moment 💗',
       days: 'Days',
       hours: 'Hours',

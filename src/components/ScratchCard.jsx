@@ -239,6 +239,11 @@ function ScratchCard({ onRevealed, autoReveal = false }) {
   const checkTimerRef = useRef(null);
   const burstTimerRef = useRef(null);
   const onRevealedRef = useRef(onRevealed);
+  const languageRef = useRef(language);
+  const tRef = useRef(t);
+
+  languageRef.current = language;
+  tRef.current = t;
 
   const [revealed, setRevealed] = useState(false);
   const [scratching, setScratching] = useState(false);
@@ -267,8 +272,10 @@ function ScratchCard({ onRevealed, autoReveal = false }) {
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     sizeRef.current = { w: width, h: height };
 
-    const foilText = t('countdown.cardFoilText', '!! scratch here !!');
-    const isIndic = language !== 'en';
+    const currentLang = languageRef.current || 'en';
+    const currentT = tRef.current || t;
+    const foilText = currentT('countdown.cardFoilText', '!! scratch here !!');
+    const isIndic = currentLang !== 'en';
     paintCoating(ctx, width, height, foilText, isIndic);
 
     const strokes = strokesRef.current;
@@ -557,9 +564,19 @@ function ScratchCard({ onRevealed, autoReveal = false }) {
 
   // Redraw foil text when language changes if card is unrevealed
   useEffect(() => {
-    if (!revealed) {
+    if (!revealedRef.current && !revealed) {
       redraw();
     }
+
+    const handleLanguageChange = () => {
+      if (!revealedRef.current) {
+        redraw();
+      }
+    };
+    window.addEventListener('wedding-language-changed', handleLanguageChange);
+    return () => {
+      window.removeEventListener('wedding-language-changed', handleLanguageChange);
+    };
   }, [language, redraw, revealed]);
 
   const cardClasses = [
