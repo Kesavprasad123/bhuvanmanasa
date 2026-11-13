@@ -257,10 +257,8 @@ export default function HostDashboard({
       <div className="acc-dash-head">
         <div className="acc-dash-title-block">
           <div className="acc-host-badge-row">
-            {isHost ? (
-              <span className="acc-host-badge">👑 HOST MODE · EDIT ACCESS</span>
-            ) : (
-              <span className="acc-host-badge is-guest-badge">👁️ GUEST VIEW · READ-ONLY</span>
+            {isHost && (
+              <span className="acc-host-badge">👑 HOST MODE</span>
             )}
             <span className="acc-live-pulse-badge">● Live Updates</span>
           </div>
@@ -268,12 +266,12 @@ export default function HostDashboard({
           <p className="acc-dash-sub">
             {isHost
               ? 'Manage room assignments, guest contact details, and check-in status.'
-              : 'View occupied rooms and guest allocations across Krishna IN and SVPC Convention Hall 1.'}
+              : 'View allocated rooms and guest stays across Krishna IN and SVPC Convention Hall 1.'}
           </p>
         </div>
 
         <div className="acc-dash-head-actions">
-          {isHost ? (
+          {isHost && (
             <>
               <button
                 type="button"
@@ -310,17 +308,6 @@ export default function HostDashboard({
                 </button>
               )}
             </>
-          ) : (
-            onOpenLogin && (
-              <button
-                type="button"
-                className="gold-button acc-login-cta-btn"
-                onClick={onOpenLogin}
-                title="Log in with host passcode to allocate or edit rooms"
-              >
-                🔒 Host Login (Edit Access)
-              </button>
-            )
           )}
         </div>
       </div>
@@ -375,8 +362,8 @@ export default function HostDashboard({
         </div>
       </div>
 
-      {/* CREATE / EDIT ENTRY FORM (Host Edit Access Only) */}
-      {isHost ? (
+      {/* CREATE / EDIT ENTRY FORM (Host Only) */}
+      {isHost && (
         <div id="acc-tracker-form" className="acc-tracker-form-card">
           <div className="acc-form-header">
             <div>
@@ -547,28 +534,6 @@ export default function HostDashboard({
               )}
             </div>
           </form>
-        </div>
-      ) : (
-        /* Read-Only Notice for Guests */
-        <div className="acc-readonly-notice">
-          <div className="acc-readonly-info">
-            <span className="acc-readonly-lock">🔒</span>
-            <div>
-              <strong>Guest View (Read-Only)</strong>
-              <p>
-                Room allocations are displayed below for your reference. Wedding host login is required to allocate or modify rooms.
-              </p>
-            </div>
-          </div>
-          {onOpenLogin && (
-            <button
-              type="button"
-              className="gold-button acc-readonly-btn"
-              onClick={onOpenLogin}
-            >
-              Host Login (Edit Access) →
-            </button>
-          )}
         </div>
       )}
 

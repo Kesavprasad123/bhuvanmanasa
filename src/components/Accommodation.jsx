@@ -435,7 +435,7 @@ function Accommodation({
           </div>
         </section>
 
-        {/* ROOM ALLOCATION TRACKER: Read-Only for Guests, Full Edit Access for Host */}
+        {/* ROOM ALLOCATION TRACKER */}
         <HostDashboard
           isHost={hostLoggedIn}
           onOpenLogin={() => setShowLogin(true)}
