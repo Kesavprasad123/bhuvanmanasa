@@ -308,7 +308,7 @@ export default function HostDashboard({
                 type="button"
                 className="gold-button acc-login-cta-btn"
                 onClick={onOpenLogin}
-                title="Log in with passcode 9229 to allocate or edit rooms"
+                title="Log in with host passcode to allocate or edit rooms"
               >
                 🔒 Host Login (Edit Access)
               </button>
@@ -556,7 +556,7 @@ export default function HostDashboard({
               className="gold-button acc-readonly-btn"
               onClick={onOpenLogin}
             >
-              Host Login (Passcode: 9229) →
+              Host Login (Edit Access) →
             </button>
           )}
         </div>

@@ -5,8 +5,6 @@
  * guest room allocations across two stay locations:
  * 1. Krishna Inn (Flexible timings on 12 Dec 2026)
  * 2. SVPC Convention Hall 1 (Wedding Hall, 12 Dec 2026 9:00 AM to 13 Dec 2026 7:00 AM)
- *
- * Passcode: 9229
  */
 
 import { PROPERTIES } from './accommodation.js';
@@ -18,11 +16,11 @@ export const TRACKER_STORAGE_KEY = 'wedding_accommodation_tracker_v5';
 const HOST_PIN_KEY = 'wedding_host_pin_code_v5';
 const SYNC_CHANNEL_NAME = 'wedding_accommodation_sync_v5';
 
-// Default 4-digit host PIN as requested by user
-export const DEFAULT_HOST_PIN = '9229';
+// Default 4-digit host PIN
+const DEFAULT_HOST_PIN = '9229';
 
 export const bookingConfigured = true;
-const WRONG_PIN = 'Invalid passcode. Please enter 9229 to unlock.';
+const WRONG_PIN = 'Incorrect passcode. Please try again.';
 
 /* ---------------------------------------------------------------- Host PIN & Storage */
 
