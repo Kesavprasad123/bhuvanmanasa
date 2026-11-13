@@ -142,15 +142,7 @@ export function useWeddingMusic({ autoStartIfActive = false } = {}) {
       sessionStorage.setItem('weddingMusicActive', 'true');
     } catch {}
 
-    let targetFile = SONG_FILES[safeIndex];
-    if (
-      targetFile === 'assets/Ubhayakushala.mp3' &&
-      typeof audio.canPlayType === 'function' &&
-      audio.canPlayType('audio/mp4')
-    ) {
-      targetFile = 'assets/Ubhayakushala.m4a';
-    }
-
+    const targetFile = SONG_FILES[safeIndex];
     const songUrl = getRootAssetUrl(targetFile);
     const currentSrc = audio.getAttribute('src') || audio.src || '';
     const isSameSrc =

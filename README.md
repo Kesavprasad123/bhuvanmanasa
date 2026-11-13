@@ -47,7 +47,7 @@ The expected addresses are:
 The website features an immersive, mobile-optimized wedding background soundtrack managed by `useWeddingMusic`:
 
 * **8-Song Wedding Playlist**:
-  1. `Ubhayakushala` *(Starting song in rotation, optimized AAC/MP3)*
+  1. `Ubhayakushala` *(Starting song in rotation, 192 kbps MP3)*
   2. `Raarandoi veduka choodham`
   3. `Alanati Ramachandrudu`
   4. `Kalyanam Vybhogam`
