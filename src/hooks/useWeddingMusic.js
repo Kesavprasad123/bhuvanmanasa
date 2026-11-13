@@ -30,18 +30,36 @@ export function getRootAssetUrl(relativePath) {
   return `${base}${encodedPath}`;
 }
 
-const getStoredSongIndex = () => {
+export const WEDDING_LAST_SONG_KEY = 'weddingLastSongIndex';
+
+// Module-level cache: ensured to calculate next song ONCE per page refresh
+let pageLoadStartingIndex = null;
+
+export function getNextRefreshSongIndex() {
+  if (pageLoadStartingIndex !== null) {
+    return pageLoadStartingIndex;
+  }
+
   try {
-    const val = localStorage.getItem('weddingSongIndex');
-    if (val !== null) {
-      const parsed = parseInt(val, 10);
-      if (!isNaN(parsed) && parsed >= 0) {
-        return parsed % SONG_FILES.length;
-      }
+    const raw = localStorage.getItem(WEDDING_LAST_SONG_KEY);
+    if (raw === null) {
+      pageLoadStartingIndex = 0;
+      localStorage.setItem(WEDDING_LAST_SONG_KEY, '0');
+      return 0;
     }
-  } catch {}
-  return 0;
-};
+
+    const prev = parseInt(raw, 10);
+    const validPrev = !isNaN(prev) && prev >= 0 ? prev : 0;
+    const next = (validPrev + 1) % SONG_FILES.length;
+
+    pageLoadStartingIndex = next;
+    localStorage.setItem(WEDDING_LAST_SONG_KEY, String(next));
+    return next;
+  } catch {
+    pageLoadStartingIndex = 0;
+    return 0;
+  }
+}
 
 /**
  * Shared wedding background music hook for Main Invitation & Accommodation.
@@ -49,30 +67,16 @@ const getStoredSongIndex = () => {
  * Requirements handled:
  * 1. Immediate playback on site open: User tap starts song without delay.
  * 2. Sequential auto-play: When a song completes, automatically advances to the next song (never repeats).
- * 3. On every refresh: Starts with a different song in rotation.
+ * 3. On every refresh: Guaranteed to start with a different song in rotation.
  * 4. Cross-page continuity: Seamlessly keeps playing when switching to Accommodation and back.
  */
-export function useWeddingMusic({ autoStartIfActive = false, isLandingPage = false } = {}) {
+export function useWeddingMusic({ autoStartIfActive = false } = {}) {
   const [musicPlaying, setMusicPlaying] = useState(false);
   const audioRef = useRef(null);
 
-  // Compute initial numeric song index (never a function)
-  const getInitialIndex = () => {
-    const stored = getStoredSongIndex();
-    if (isLandingPage) {
-      // Rotate to next song on every page reload
-      const nextOnRefresh = (stored + 1) % SONG_FILES.length;
-      try {
-        localStorage.setItem('weddingSongIndex', String(nextOnRefresh));
-      } catch {}
-      return nextOnRefresh;
-    }
-    return stored;
-  };
-
-  const initialIndex = getInitialIndex();
-  const songIndexRef = useRef(initialIndex);
-  const [currentSongIndex, setCurrentSongIndex] = useState(initialIndex);
+  // Initialize with the freshly rotated song for this page load
+  const [currentSongIndex, setCurrentSongIndex] = useState(() => getNextRefreshSongIndex());
+  const songIndexRef = useRef(currentSongIndex);
 
   // Save playback state before unloading
   useEffect(() => {
@@ -131,10 +135,10 @@ export function useWeddingMusic({ autoStartIfActive = false, isLandingPage = fal
 
     songIndexRef.current = safeIndex;
     setCurrentSongIndex(safeIndex);
+    pageLoadStartingIndex = safeIndex;
 
     try {
-      localStorage.setItem('weddingSongIndex', String(safeIndex));
-      sessionStorage.setItem('weddingSongIndex', String(safeIndex));
+      localStorage.setItem(WEDDING_LAST_SONG_KEY, String(safeIndex));
       sessionStorage.setItem('weddingMusicActive', 'true');
     } catch {}
 
