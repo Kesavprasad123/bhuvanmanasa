@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { useLanguage } from '../context/LanguageContext';
 
 export function getAccommodationHref() {
   if (typeof window === 'undefined') return '/accommodation/';
@@ -28,6 +29,7 @@ function FloatingNav({
   onNavigateToAccommodation,
   onNavigateToGallery,
 }) {
+  const { t } = useLanguage();
   const [open, setOpen] = useState(false);
   const [accommodationHref, setAccommodationHref] = useState(getAccommodationHref);
   const [galleryHref, setGalleryHref] = useState(getGalleryHref);
@@ -154,12 +156,12 @@ function FloatingNav({
       </div>
 
       <div className="floating-nav-links" id="floating-nav-links">
-        <a href="#home" onClick={handleNavClick}>శుభారంభం</a>
-        <a href="#story" onClick={handleNavClick}>వధూవరులు</a>
-        <a href="#events" onClick={handleNavClick}>శుభకార్యాలు</a>
-        <a href={galleryHref} onClick={handleGalleryClick}>చిత్రమాలిక &amp; వీడియోలు</a>
-        <a href="#venue" onClick={handleNavClick}>కళ్యాణ వేదిక</a>
-        <a href={accommodationHref} onClick={handleAccommodationClick}>విడిది ఇల్లు</a>
+        <a href="#home" onClick={handleNavClick}>{t('nav.home', 'శుభారంభం')}</a>
+        <a href="#story" onClick={handleNavClick}>{t('nav.story', 'వధూవరులు')}</a>
+        <a href="#events" onClick={handleNavClick}>{t('nav.events', 'శుభకార్యాలు')}</a>
+        <a href={galleryHref} onClick={handleGalleryClick}>{t('nav.gallery', 'చిత్రమాలిక & వీడియోలు')}</a>
+        <a href="#venue" onClick={handleNavClick}>{t('nav.venue', 'కళ్యాణ వేదిక')}</a>
+        <a href={accommodationHref} onClick={handleAccommodationClick}>{t('nav.stay', 'విడిది ఇల్లు')}</a>
       </div>
     </nav>
   );

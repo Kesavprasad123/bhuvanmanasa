@@ -1,4 +1,5 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { useLanguage } from '../context/LanguageContext';
 
 /**
  * ╔══════════════════════════════════════════════════════════════════╗
@@ -120,6 +121,7 @@ function haversineDistance(lat1, lon1, lat2, lon2) {
 }
 
 function Events() {
+  const { t } = useLanguage();
   const [activeIndex, setActiveIndex] = useState(0);
   const [flippedCards, setFlippedCards] = useState({});
   const [userLocation, setUserLocation] = useState(null);
@@ -129,6 +131,21 @@ function Events() {
   const touchStartXRef = useRef(null);
   const touchEndXRef = useRef(null);
   const total = EVENTS.length;
+
+  const displayEvents = useMemo(() => {
+    return EVENTS.map((event, index) => {
+      const itemData = t(`events.items.${index}`) || {};
+      return {
+        ...event,
+        title: itemData.title || event.title,
+        teluguTitle: itemData.teluguTitle || event.teluguTitle,
+        subtitle: itemData.subtitle || event.subtitle,
+        time: itemData.time || event.time,
+        date: itemData.date || event.date,
+        venue: itemData.venue || event.venue,
+      };
+    });
+  }, [t]);
 
   const goToNext = useCallback(() => {
     setFlippedCards({});
@@ -243,10 +260,10 @@ function Events() {
       aria-label="Wedding Events Showcase"
     >
       <div className="section-inner wide reveal">
-        <p className="eyebrow">SAVE THE DATES</p>
-        <h2>Wedding Festivities</h2>
+        <p className="eyebrow">{t('events.eyebrow', 'SAVE THE DATES')}</p>
+        <h2>{t('events.title', 'Wedding Festivities')}</h2>
         <p className="section-subtitle">
-          Seven sacred celebrations leading to a lifetime of togetherness.
+          {t('events.subtitle', 'Seven sacred celebrations leading to a lifetime of togetherness.')}
         </p>
 
         {/* Quick Event Selector Timeline Bar */}
@@ -254,9 +271,9 @@ function Events() {
           ref={timelineNavRef}
           className="events-timeline-nav"
           role="tablist"
-          aria-label="Wedding events timeline"
+          aria-label={t('events.title', 'Wedding events timeline')}
         >
-          {EVENTS.map((event, index) => {
+          {displayEvents.map((event, index) => {
             const isSelected = activeIndex === index;
             return (
               <button
@@ -287,7 +304,7 @@ function Events() {
             type="button"
             className="events-nav-chevron prev"
             onClick={goToPrev}
-            aria-label="Previous celebration"
+            aria-label={t('events.prevCelebration', 'Previous celebration')}
           >
             &#8249;
           </button>
@@ -296,14 +313,14 @@ function Events() {
             type="button"
             className="events-nav-chevron next"
             onClick={goToNext}
-            aria-label="Next celebration"
+            aria-label={t('events.nextCelebration', 'Next celebration')}
           >
             &#8250;
           </button>
 
           {/* 3-Card Stage Area */}
           <div className="events-stage-carousel">
-            {EVENTS.map((event, index) => {
+            {displayEvents.map((event, index) => {
               const status = getCardStatus(index);
               const isActive = status === 'is-active';
               const isPrev = status === 'is-prev';
@@ -333,7 +350,7 @@ function Events() {
                   role="button"
                   tabIndex={isActive ? 0 : -1}
                   aria-current={isActive ? 'true' : 'false'}
-                  aria-label={`${event.title} - Event ${event.number}`}
+                  aria-label={`${event.title} - ${t('events.eventLabel', 'Event')} ${event.number}`}
                 >
                   {/* ===== FRONT FACE ===== */}
                   <div
@@ -346,7 +363,7 @@ function Events() {
                     {/* Top Badge */}
                     <div className="stage-card-top">
                       <span className="stage-event-badge">
-                        EVENT {event.number} / 07
+                        {t('events.eventLabel', 'EVENT')} {event.number} / 07
                       </span>
                       <span className="stage-event-telugu">{event.teluguTitle}</span>
                     </div>
@@ -360,7 +377,7 @@ function Events() {
                         <div className="meta-item">
                           <span className="meta-icon" aria-hidden="true">🕐</span>
                           <div className="meta-text">
-                            <small>TIME</small>
+                            <small>{t('events.timeLabel', 'TIME')}</small>
                             <strong>{event.time}</strong>
                           </div>
                         </div>
@@ -368,7 +385,7 @@ function Events() {
                         <div className="meta-item">
                           <span className="meta-icon" aria-hidden="true">📅</span>
                           <div className="meta-text">
-                            <small>DATE</small>
+                            <small>{t('events.dateLabel', 'DATE')}</small>
                             <strong>{event.date}</strong>
                           </div>
                         </div>
@@ -376,7 +393,7 @@ function Events() {
                         <div className="meta-item venue-meta">
                           <span className="meta-icon" aria-hidden="true">📍</span>
                           <div className="meta-text">
-                            <small>VENUE</small>
+                            <small>{t('events.venueLabel', 'VENUE')}</small>
                             <strong>{event.venue}</strong>
                           </div>
                         </div>
@@ -389,10 +406,10 @@ function Events() {
                         type="button"
                         className="flip-trigger-btn"
                         onClick={(e) => toggleFlip(index, e)}
-                        aria-label="View venue location on map"
+                        aria-label={t('events.viewMapBtn', 'View venue location on map')}
                       >
                         <span className="flip-arrow-icon">📍</span>
-                        <span className="flip-arrow-text">View Venue Map &amp; Navigation</span>
+                        <span className="flip-arrow-text">{t('events.viewMapBtn', 'View Venue Map & Navigation')}</span>
                         <span className="flip-arrow-chevron" aria-hidden="true">↻</span>
                       </button>
                     )}
@@ -402,7 +419,7 @@ function Events() {
                   <div className="card-face card-back">
                     <div className="card-back-inner">
                       <div className="back-header">
-                        <span className="back-event-badge">EVENT {event.number} / 07</span>
+                        <span className="back-event-badge">{t('events.eventLabel', 'EVENT')} {event.number} / 07</span>
                         <h4 className="back-title">{event.title}</h4>
                         <p className="back-venue">{event.venue}</p>
                       </div>
@@ -420,7 +437,7 @@ function Events() {
                         ) : (
                           <div className="back-map-placeholder">
                             <span className="map-placeholder-icon">📍</span>
-                            <p>Venue map coming soon</p>
+                            <p>{t('events.mapComingSoon', 'Venue map coming soon')}</p>
                           </div>
                         )}
                       </div>
@@ -430,7 +447,7 @@ function Events() {
                         <div className="back-distance">
                           <span className="distance-icon">🚗</span>
                           <span className="distance-text">
-                            <strong>{distance}</strong> away from your location
+                            <strong>{distance}</strong> {t('events.distanceAway', 'away from your location')}
                           </span>
                         </div>
                       )}
@@ -444,11 +461,11 @@ function Events() {
                           className="back-navigate-btn"
                           onClick={(e) => e.stopPropagation()}
                         >
-                          <span>📍 Navigate to Venue</span>
+                          <span>{t('events.navigateBtn', '📍 Navigate to Venue')}</span>
                         </a>
                       ) : (
                         <div className="back-navigate-btn disabled">
-                          <span>📍 Directions coming soon</span>
+                          <span>{t('events.directionsComingSoon', '📍 Directions coming soon')}</span>
                         </div>
                       )}
 
@@ -457,9 +474,9 @@ function Events() {
                         type="button"
                         className="flip-back-btn"
                         onClick={(e) => toggleFlip(index, e)}
-                        aria-label="Flip back to event details"
+                        aria-label={t('events.backToEventBtn', 'Flip back to event details')}
                       >
-                        ↻ Back to Event
+                        {t('events.backToEventBtn', '↻ Back to Event')}
                       </button>
                     </div>
                   </div>
@@ -467,7 +484,7 @@ function Events() {
                   {/* Visual click hint for side cards */}
                   {!isActive && (
                     <div className="side-card-hint">
-                      <span>{isPrev ? '‹ View Event' : 'View Event ›'}</span>
+                      <span>{isPrev ? `‹ ${event.title}` : `${event.title} ›`}</span>
                     </div>
                   )}
                 </article>
@@ -482,12 +499,12 @@ function Events() {
             type="button"
             className="events-page-arrow"
             onClick={goToPrev}
-            aria-label="Previous celebration"
+            aria-label={t('events.prevCelebration', 'Previous celebration')}
           >
             ‹
           </button>
           <div className="events-dots" role="tablist">
-            {EVENTS.map((event, index) => (
+            {displayEvents.map((event, index) => (
               <button
                 key={event.number}
                 type="button"
@@ -502,12 +519,12 @@ function Events() {
             type="button"
             className="events-page-arrow"
             onClick={goToNext}
-            aria-label="Next celebration"
+            aria-label={t('events.nextCelebration', 'Next celebration')}
           >
             ›
           </button>
           <span className="events-counter-label">
-            Event {EVENTS[activeIndex].number} of 07 · {EVENTS[activeIndex].title}
+            {t('events.eventLabel', 'Event')} {displayEvents[activeIndex].number} / 07 · {displayEvents[activeIndex].title}
           </span>
         </div>
       </div>

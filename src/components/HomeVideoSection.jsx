@@ -1,4 +1,5 @@
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
+import { useLanguage } from '../context/LanguageContext';
 
 const BASE = import.meta.env.BASE_URL || './';
 const cleanBase = BASE.endsWith('/') ? BASE : `${BASE}/`;
@@ -53,6 +54,7 @@ function ReelCard({
   onVideoPlayWithSound,
   onOpenExpand,
 }) {
+  const { t } = useLanguage();
   const videoRef = useRef(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -200,12 +202,12 @@ function ReelCard({
                   <span className="wave wave-2" />
                   <span className="wave wave-3" />
                 </span>
-                <span className="hvs-sound-label">Sound ON</span>
+                <span className="hvs-sound-label">{t('reels.soundOn', 'Sound ON')}</span>
               </>
             ) : (
               <>
                 <span className="hvs-sound-icon" aria-hidden="true">🔇</span>
-                <span className="hvs-sound-label">Tap for Sound</span>
+                <span className="hvs-sound-label">{t('reels.tapForSound', 'Tap for Sound')}</span>
               </>
             )}
           </button>
@@ -217,7 +219,7 @@ function ReelCard({
             <div className="hvs-reel-paused-btn" aria-hidden="true">
               ▶
             </div>
-            <span className="hvs-reel-paused-hint">Tap to Resume</span>
+            <span className="hvs-reel-paused-hint">{t('reels.tapToResume', 'Tap to Resume')}</span>
           </div>
         )}
 
@@ -233,29 +235,29 @@ function ReelCard({
               type="button"
               className="hvs-reel-btn"
               onClick={handleTogglePlay}
-              aria-label={isPlaying ? 'Pause reel' : 'Play reel'}
+              aria-label={isPlaying ? t('reels.pause', 'Pause') : t('reels.play', 'Play')}
             >
               <span className="hvs-btn-icon" aria-hidden="true">{isPlaying ? '⏸' : '▶'}</span>
-              <span className="hvs-btn-text">{isPlaying ? 'Pause' : 'Play'}</span>
+              <span className="hvs-btn-text">{isPlaying ? t('reels.pause', 'Pause') : t('reels.play', 'Play')}</span>
             </button>
             <button
               type="button"
               className={`hvs-reel-btn${isUnmuted ? ' is-active' : ''}`}
               onClick={handleSoundClick}
-              aria-label={isUnmuted ? 'Mute audio' : 'Unmute audio'}
+              aria-label={isUnmuted ? t('reels.mute', 'Mute') : t('reels.sound', 'Sound')}
             >
               <span className="hvs-btn-icon" aria-hidden="true">{isUnmuted ? '🔊' : '🔈'}</span>
-              <span className="hvs-btn-text">{isUnmuted ? 'Mute' : 'Sound'}</span>
+              <span className="hvs-btn-text">{isUnmuted ? t('reels.mute', 'Mute') : t('reels.sound', 'Sound')}</span>
             </button>
             <button
               type="button"
               className="hvs-reel-btn hvs-expand-btn"
               onClick={handleExpandClick}
               aria-label="Extend and watch full video in high resolution"
-              title="Extend / Full View"
+              title={t('reels.extend', 'Extend')}
             >
               <span className="hvs-btn-icon" aria-hidden="true">⛶</span>
-              <span className="hvs-btn-text">Extend</span>
+              <span className="hvs-btn-text">{t('reels.extend', 'Extend')}</span>
             </button>
           </div>
 
@@ -273,6 +275,7 @@ function ReelCard({
 }
 
 function HomeVideoSection({ onNavigateToGallery, onPauseMusic, onResumeMusic }) {
+  const { t } = useLanguage();
   const [unmutedId, setUnmutedId] = useState(null);
   const [expandedVideo, setExpandedVideo] = useState(null);
   const [showExitConfirm, setShowExitConfirm] = useState(false);
@@ -282,6 +285,19 @@ function HomeVideoSection({ onNavigateToGallery, onPauseMusic, onResumeMusic }) 
     if (typeof window === 'undefined') return false;
     return window.innerWidth < 768;
   });
+
+  const displayReels = useMemo(() => {
+    return REEL_VIDEOS.map((video, index) => {
+      const itemData = t(`reels.items.${index}`) || {};
+      return {
+        ...video,
+        title: itemData.title || video.title,
+        teluguTitle: itemData.teluguTitle || video.teluguTitle,
+        subtitle: itemData.subtitle || video.subtitle,
+        badge: itemData.badge || video.badge,
+      };
+    });
+  }, [t]);
 
   const modalVideoRef = useRef(null);
   const sectionRef = useRef(null);
@@ -374,19 +390,19 @@ function HomeVideoSection({ onNavigateToGallery, onPauseMusic, onResumeMusic }) 
   // Lightbox Next/Prev navigation
   const handleNextExpand = useCallback(() => {
     if (!expandedVideo) return;
-    const currentIndex = REEL_VIDEOS.findIndex((v) => v.id === expandedVideo.id);
-    const nextIndex = (currentIndex + 1) % REEL_VIDEOS.length;
-    setExpandedVideo(REEL_VIDEOS[nextIndex]);
+    const currentIndex = displayReels.findIndex((v) => v.id === expandedVideo.id);
+    const nextIndex = (currentIndex + 1) % displayReels.length;
+    setExpandedVideo(displayReels[nextIndex]);
     setShowExitConfirm(false);
-  }, [expandedVideo]);
+  }, [expandedVideo, displayReels]);
 
   const handlePrevExpand = useCallback(() => {
     if (!expandedVideo) return;
-    const currentIndex = REEL_VIDEOS.findIndex((v) => v.id === expandedVideo.id);
-    const prevIndex = (currentIndex - 1 + REEL_VIDEOS.length) % REEL_VIDEOS.length;
-    setExpandedVideo(REEL_VIDEOS[prevIndex]);
+    const currentIndex = displayReels.findIndex((v) => v.id === expandedVideo.id);
+    const prevIndex = (currentIndex - 1 + displayReels.length) % displayReels.length;
+    setExpandedVideo(displayReels[prevIndex]);
     setShowExitConfirm(false);
-  }, [expandedVideo]);
+  }, [expandedVideo, displayReels]);
 
   // Ensure website music stays paused while modal video is open
   useEffect(() => {
@@ -446,7 +462,7 @@ function HomeVideoSection({ onNavigateToGallery, onPauseMusic, onResumeMusic }) 
   }, [unmutedId, expandedVideo, onResumeMusic]);
 
   const currentReelIndex = expandedVideo
-    ? REEL_VIDEOS.findIndex((v) => v.id === expandedVideo.id) + 1
+    ? displayReels.findIndex((v) => v.id === expandedVideo.id) + 1
     : 1;
 
   return (
@@ -454,10 +470,10 @@ function HomeVideoSection({ onNavigateToGallery, onPauseMusic, onResumeMusic }) 
       <div className="section-inner wide">
         {/* Section Heading */}
         <div className="hvs-header reveal">
-          <p className="eyebrow">WEDDING REELS · వివాహ వేడుకల రీల్స్</p>
-          <h2>Cinematic Wedding Reels &amp; Moments</h2>
+          <p className="eyebrow">{t('reels.eyebrow', 'WEDDING REELS · వివాహ వేడుకల రీల్స్')}</p>
+          <h2>{t('reels.title', 'Cinematic Wedding Reels & Moments')}</h2>
           <p className="hvs-header-sub">
-            Continuous moments of joy, sacred rituals, and family love. Tap any reel to listen with sound!
+            {t('reels.sub', 'Continuous moments of joy, sacred rituals, and family love. Tap any reel to listen with sound!')}
           </p>
 
           {/* Ornamental Divider */}
@@ -484,7 +500,7 @@ function HomeVideoSection({ onNavigateToGallery, onPauseMusic, onResumeMusic }) 
           className="hvs-reels-showcase reveal"
           onScroll={handleShowcaseScroll}
         >
-          {REEL_VIDEOS.map((video, index) => {
+          {displayReels.map((video, index) => {
             // Android-safe playback allocation:
             // 1. Off-screen: nothing plays (0 decoders used)
             // 2. Modal open: cards pause
@@ -519,7 +535,7 @@ function HomeVideoSection({ onNavigateToGallery, onPauseMusic, onResumeMusic }) 
 
         {/* Mobile carousel indicator dots */}
         <div className="hvs-mobile-dots" aria-label="Reel indicator dots">
-          {REEL_VIDEOS.map((video, index) => (
+          {displayReels.map((video, index) => (
             <button
               key={video.id}
               type="button"
@@ -542,10 +558,10 @@ function HomeVideoSection({ onNavigateToGallery, onPauseMusic, onResumeMusic }) 
         {/* Call to Action Banner to Gallery Page */}
         <div className="video-gallery-cta-banner reveal">
           <div className="cta-banner-text">
-            <span className="cta-eyebrow">PHOTO GALLERIES &amp; MEMORIES</span>
-            <h3>Explore Ceremony Photos &amp; More</h3>
+            <span className="cta-eyebrow">{t('reels.photoCtaEyebrow', 'PHOTO GALLERIES & MEMORIES')}</span>
+            <h3>{t('reels.photoCtaTitle', 'Explore Ceremony Photos & More')}</h3>
             <p>
-              Browse Pellikoduku, Pellikuthuru, Haldi Snanam, Mehendi, Sangeeth, and sacred Muhurtham ceremonies.
+              {t('reels.photoCtaDesc', 'Browse Pellikoduku, Pellikuthuru, Haldi Snanam, Mehendi, Sangeeth, and sacred Muhurtham ceremonies.')}
             </p>
           </div>
           <button
@@ -553,7 +569,7 @@ function HomeVideoSection({ onNavigateToGallery, onPauseMusic, onResumeMusic }) 
             className="gold-button cta-gallery-btn"
             onClick={onNavigateToGallery}
           >
-            📸 View Full Gallery →
+            {t('reels.photoCtaBtn', '📸 View Full Gallery →')}
           </button>
         </div>
       </div>
@@ -573,13 +589,13 @@ function HomeVideoSection({ onNavigateToGallery, onPauseMusic, onResumeMusic }) 
               type="button"
               className="hvs-modal-back-btn"
               onClick={() => setShowExitConfirm(true)}
-              aria-label="Return to wedding invitation"
+              aria-label={t('reels.backToInvitation', 'Return to wedding invitation')}
             >
-              ← Back to Invitation
+              {t('reels.backToInvitation', '← Back to Invitation')}
             </button>
 
             <span className="hvs-modal-counter">
-              Reel {currentReelIndex} of {REEL_VIDEOS.length}
+              Reel {currentReelIndex} of {displayReels.length}
             </span>
 
             <button
@@ -663,12 +679,11 @@ function HomeVideoSection({ onNavigateToGallery, onPauseMusic, onResumeMusic }) 
                 <div className="hvs-confirm-card">
                   <div className="hvs-confirm-icon" aria-hidden="true">🎬</div>
                   <h4 id="hvs-confirm-title" className="hvs-confirm-title">
-                    Return to Wedding Invitation?
+                    {t('reels.exitConfirmTitle', 'Return to Wedding Invitation?')}
                   </h4>
-                  <p className="hvs-confirm-telugu">వెడ్డింగ్ ఆహ్వానానికి తిరిగి వెళ్ళాలా?</p>
+                  <p className="hvs-confirm-telugu">{t('reels.exitConfirmTelugu', 'వెడ్డింగ్ ఆహ్వానానికి తిరిగి వెళ్ళాలా?')}</p>
                   <p className="hvs-confirm-desc">
-                    You are currently watching <strong>"{expandedVideo.title}"</strong>.
-                    Would you like to continue watching this reel, or return to the website?
+                    {t('reels.exitConfirmDesc', `You are currently watching "${expandedVideo.title}". Would you like to continue watching this reel, or return to the website?`)}
                   </p>
                   <div className="hvs-confirm-actions">
                     <button
@@ -676,14 +691,14 @@ function HomeVideoSection({ onNavigateToGallery, onPauseMusic, onResumeMusic }) 
                       className="gold-button hvs-confirm-btn-stay"
                       onClick={handleCancelExit}
                     >
-                      ▶ Keep Watching Reel
+                      {t('reels.exitConfirmKeep', '▶ Keep Watching Reel')}
                     </button>
                     <button
                       type="button"
                       className="hvs-confirm-btn-exit"
                       onClick={handleConfirmExit}
                     >
-                      ✕ Yes, Return to Website
+                      {t('reels.exitConfirmExit', '✕ Yes, Return to Website')}
                     </button>
                   </div>
                 </div>

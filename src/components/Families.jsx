@@ -1,45 +1,49 @@
+import { useLanguage } from '../context/LanguageContext';
+
 function Families() {
+  const { t } = useLanguage();
+
   return (
     <section id="story" className="families-section section-sage">
       <div className="family-panel reveal">
         <br />
-        <p className="telugu top-telugu">శ్రీరస్తు • శుభమస్తు • అవిఘ్నమస్తు</p>
-        <p className="eyebrow">WITH LOVE &amp; BLESSINGS</p>
-        <h2>Two Families, One New Beginning</h2>
+        <p className="telugu top-telugu">{t('families.mangala', 'శ్రీరస్తు • శుభమస్తు • అవిఘ్నమస్తు')}</p>
+        <p className="eyebrow">{t('families.eyebrow', 'WITH LOVE & BLESSINGS')}</p>
+        <h2>{t('families.title', 'Two Families, One New Beginning')}</h2>
         <p className="family-intro">
-          With the blessings of our parents and elders, we invite you to celebrate the wedding of
+          {t('families.intro', 'With the blessings of our parents and elders, we invite you to celebrate the wedding of')}
         </p>
 
         <div className="couple-names">
           <div className="person">
-            <span className="role">GROOM</span>
-            <h3>Bhuvan Teja Harihara Kumar</h3>
-            <p>S/o</p>
+            <span className="role">{t('families.groomRole', 'GROOM')}</span>
+            <h3>{t('families.groomName', 'Bhuvan Teja Harihara Kumar')}</h3>
+            <p>{t('families.sonOf', 'S/o')}</p>
             <strong>
-              Kotti Venkata Subbarao
+              {t('families.groomFather', 'Kotti Venkata Subbarao')}
               <br />
-              &amp; Smt. Kotti Padma Tulasi
+              &amp; {t('families.groomMother', 'Smt. Kotti Padma Tulasi')}
             </strong>
             <br />
-            <strong>Kotti Kesava Prasad (Younger)</strong>
+            <strong>{t('families.groomBrother', 'Kotti Kesava Prasad (Younger)')}</strong>
           </div>
-          <div className="ampersand">&amp;</div>
+          <div className="ampersand">{t('families.ampersand', '&')}</div>
           <div className="person">
-            <span className="role">BRIDE</span>
-            <h3>Cholendra Manasa</h3>
-            <p>D/o</p>
+            <span className="role">{t('families.brideRole', 'BRIDE')}</span>
+            <h3>{t('families.brideName', 'Cholendra Manasa')}</h3>
+            <p>{t('families.daughterOf', 'D/o')}</p>
             <strong>
-              Manyapu Satya Kiran
+              {t('families.brideFather', 'Manyapu Satya Kiran')}
               <br />
-              &amp; Smt. Manyapu Sujatha (Late)
+              &amp; {t('families.brideMother', 'Smt. Manyapu Sujatha (Late)')}
             </strong>
             <br />
-            <strong>Manyapu Harsha Vardhan (Younger)</strong>
+            <strong>{t('families.brideBrother', 'Manyapu Harsha Vardhan (Younger)')}</strong>
           </div>
         </div>
         <br />
 
-        <div className="family-blessing">❧ With their love, blessings &amp; warm wishes ❧</div>
+        <div className="family-blessing">{t('families.blessing', '❧ With their love, blessings & warm wishes ❧')}</div>
       </div>
     </section>
   );

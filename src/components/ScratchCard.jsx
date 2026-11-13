@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { useLanguage } from '../context/LanguageContext';
 
 /* ---------------------------------------------------------------
    Gold scratch card — HTML5 canvas coating over the hidden date.
@@ -25,16 +26,20 @@ function roundedPath(ctx, x, y, width, height, radius) {
   ctx.closePath();
 }
 
-function drawCardText(ctx, width, height) {
-  const family = '"Great Vibes", "Brush Script MT", cursive';
-  let size = Math.min(width * 0.145, height * 0.2);
+function drawCardText(ctx, width, height, text = '!! scratch here !!', isIndic = false) {
+  const family = isIndic
+    ? '"Noto Serif Telugu", "Noto Serif Tamil", "Noto Serif Malayalam", "Noto Serif Devanagari", "Playfair Display", serif'
+    : '"Great Vibes", "Brush Script MT", cursive';
+  let size = isIndic
+    ? Math.min(width * 0.085, height * 0.16)
+    : Math.min(width * 0.145, height * 0.2);
 
-  ctx.font = `italic 400 ${size}px ${family}`;
+  ctx.font = isIndic ? `600 ${size}px ${family}` : `italic 400 ${size}px ${family}`;
   const maxWidth = width * 0.84;
-  const measured = ctx.measureText(CARD_TEXT).width;
+  const measured = ctx.measureText(text).width;
   if (measured > maxWidth && measured > 0) {
-    size = Math.max(14, size * (maxWidth / measured));
-    ctx.font = `italic 400 ${size}px ${family}`;
+    size = Math.max(13, size * (maxWidth / measured));
+    ctx.font = isIndic ? `600 ${size}px ${family}` : `italic 400 ${size}px ${family}`;
   }
 
   ctx.save();
@@ -44,13 +49,13 @@ function drawCardText(ctx, width, height) {
   ctx.shadowBlur = Math.max(5, size * 0.1);
   ctx.shadowOffsetY = Math.max(1, size * 0.03);
   ctx.fillStyle = 'rgba(255, 255, 255, .97)';
-  ctx.fillText(CARD_TEXT, width / 2, height / 2 + size * 0.05);
+  ctx.fillText(text, width / 2, height / 2 + size * 0.05);
   ctx.restore();
 }
 
 /* Paints the full luxurious gold foil surface (gradient + diagonal
    reflections + soft borders + calligraphy). No icons, no illustration. */
-function paintCoating(ctx, width, height) {
+function paintCoating(ctx, width, height, text, isIndic) {
   ctx.save();
   ctx.globalCompositeOperation = 'source-over';
   ctx.clearRect(0, 0, width, height);
@@ -152,8 +157,8 @@ function paintCoating(ctx, width, height) {
   roundedPath(ctx, 5, 5, width - 10, height - 10, 20);
   ctx.stroke();
 
-  // 6 — centred italic calligraphy
-  drawCardText(ctx, width, height);
+  // 6 — centred calligraphy
+  drawCardText(ctx, width, height, text, isIndic);
   ctx.restore();
 }
 
@@ -223,6 +228,7 @@ function buildBurst() {
 }
 
 function ScratchCard({ onRevealed, autoReveal = false }) {
+  const { t, language } = useLanguage();
   const canvasRef = useRef(null);
   const sizeRef = useRef({ w: 0, h: 0 });
   const dprRef = useRef(1);
@@ -261,7 +267,9 @@ function ScratchCard({ onRevealed, autoReveal = false }) {
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     sizeRef.current = { w: width, h: height };
 
-    paintCoating(ctx, width, height);
+    const foilText = t('countdown.cardFoilText', '!! scratch here !!');
+    const isIndic = language !== 'en';
+    paintCoating(ctx, width, height, foilText, isIndic);
 
     const strokes = strokesRef.current;
     if (strokes.length) {
@@ -547,6 +555,13 @@ function ScratchCard({ onRevealed, autoReveal = false }) {
     };
   }, [redraw]);
 
+  // Redraw foil text when language changes if card is unrevealed
+  useEffect(() => {
+    if (!revealed) {
+      redraw();
+    }
+  }, [language, redraw, revealed]);
+
   const cardClasses = [
     'scratch-card',
     revealed ? 'is-revealed' : '',
@@ -561,10 +576,10 @@ function ScratchCard({ onRevealed, autoReveal = false }) {
         <div className="scratch-underlay">
           <div className="scratch-underlay-content">
             <p className="scratch-names">
-              Bhuvan <span className="scratch-heart">🩷</span> Manasa
+              {t('countdown.names', 'Bhuvan 🩷 Manasa')}
             </p>
-            <p className="scratch-date">12 December 2026</p>
-            <p className="scratch-time">8:26 PM IST</p>
+            <p className="scratch-date">{t('countdown.revealedDate', '12 December 2026')}</p>
+            <p className="scratch-time">{t('countdown.revealedTime', '8:26 PM IST (Muhurtham)')}</p>
           </div>
         </div>
 

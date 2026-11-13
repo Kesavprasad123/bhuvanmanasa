@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback, lazy, Suspense } from 'react';
 import FallingFlowers from './components/FallingFlowers';
 import Opening from './components/Opening';
+import LanguageSelector from './components/LanguageSelector';
+import { LanguageProvider, useLanguage } from './context/LanguageContext';
 import useScrollReveal from './hooks/useScrollReveal';
 import useWeddingMusic from './hooks/useWeddingMusic';
 import { getAccommodationHref, getGalleryHref, getHomeHref } from './components/FloatingNav';
@@ -29,7 +31,7 @@ function getInitialRoute(initialPath) {
   return /\/accommodation(?:\/|$)/i.test(window.location.pathname) ? 'accommodation' : 'home';
 }
 
-function App({ initialRoute = null }) {
+function AppContent({ initialRoute = null }) {
   const [currentRoute, setCurrentRoute] = useState(() => getInitialRoute(initialRoute));
   const isDirectSubpage = currentRoute === 'accommodation' || currentRoute === 'gallery';
   const [isOpen, setIsOpen] = useState(isDirectSubpage);
@@ -178,6 +180,8 @@ function App({ initialRoute = null }) {
         preload="none"
       />
 
+      {currentRoute === 'home' && <LanguageSelector variant="fixed" />}
+
       {currentRoute === 'gallery' ? (
         <Suspense fallback={<div style={{ minHeight: '100vh', background: '#fbf3e9' }} />}>
           <GalleryPage
@@ -250,6 +254,14 @@ function App({ initialRoute = null }) {
         </>
       )}
     </>
+  );
+}
+
+function App(props) {
+  return (
+    <LanguageProvider>
+      <AppContent {...props} />
+    </LanguageProvider>
   );
 }
 

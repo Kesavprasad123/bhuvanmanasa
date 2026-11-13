@@ -1,4 +1,8 @@
+import { useLanguage } from '../context/LanguageContext';
+
 function Hero({ onExplore }) {
+  const { t } = useLanguage();
+
   const handleClick = (e) => {
     if (onExplore) {
       e.preventDefault();
@@ -12,16 +16,16 @@ function Hero({ onExplore }) {
       <div className="hero-floral hero-floral-left"></div>
       <div className="hero-floral hero-floral-right"></div>
       <div className="hero-content reveal">
-        <p className="eyebrow light-text">WITH THE BLESSINGS OF OUR FAMILIES</p>
+        <p className="eyebrow light-text">{t('hero.blessings', 'WITH THE BLESSINGS OF OUR FAMILIES')}</p>
         <br />
         <div className="hero-om">ॐ</div>
-        <p className="hero-intro">Two hearts • One beautiful journey</p>
+        <p className="hero-intro">{t('hero.intro', 'Two hearts • One beautiful journey')}</p>
         <br />
         <br />
         <h1>
-          <span>Bhuvan</span>
+          <span>{t('hero.groomFirstName', 'Bhuvan')}</span>
           <i>&hearts;</i>
-          <span>Manasa</span>
+          <span>{t('hero.brideFirstName', 'Manasa')}</span>
         </h1>
         <a
           href="#countdown"
@@ -29,7 +33,7 @@ function Hero({ onExplore }) {
           className="scroll-button"
           style={{ touchAction: 'manipulation' }}
         >
-          Explore our celebration ↓
+          {t('hero.explore', 'Explore our celebration ↓')}
         </a>
       </div>
     </section>

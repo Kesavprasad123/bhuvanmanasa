@@ -1,4 +1,5 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import { useLanguage } from '../context/LanguageContext';
 
 const BASE = import.meta.env.BASE_URL || './';
 const cleanBase = BASE.endsWith('/') ? BASE : `${BASE}/`;
@@ -133,8 +134,21 @@ const GALLERY_IMAGES = [
 ];
 
 function Gallery() {
+  const { t } = useLanguage();
   const [activePhotoIndex, setActivePhotoIndex] = useState(null);
   const touchStartXRef = useRef(null);
+
+  const displayImages = useMemo(() => {
+    return GALLERY_IMAGES.map((img, index) => {
+      const itemData = t(`gallery.items.${index}`) || {};
+      return {
+        ...img,
+        title: itemData.title || img.title,
+        subtitle: itemData.subtitle || img.subtitle,
+        badge: itemData.badge || img.badge,
+      };
+    });
+  }, [t]);
 
   const openLightbox = (index) => {
     setActivePhotoIndex(index);
@@ -145,14 +159,14 @@ function Gallery() {
   }, []);
 
   const showNext = useCallback(() => {
-    setActivePhotoIndex((prev) => (prev !== null ? (prev + 1) % GALLERY_IMAGES.length : null));
-  }, []);
+    setActivePhotoIndex((prev) => (prev !== null ? (prev + 1) % displayImages.length : null));
+  }, [displayImages.length]);
 
   const showPrev = useCallback(() => {
     setActivePhotoIndex((prev) =>
-      prev !== null ? (prev - 1 + GALLERY_IMAGES.length) % GALLERY_IMAGES.length : null
+      prev !== null ? (prev - 1 + displayImages.length) % displayImages.length : null
     );
-  }, []);
+  }, [displayImages.length]);
 
   // Keyboard navigation for lightbox
   useEffect(() => {
@@ -196,19 +210,19 @@ function Gallery() {
     }
   };
 
-  const activePhoto = activePhotoIndex !== null ? GALLERY_IMAGES[activePhotoIndex] : null;
+  const activePhoto = activePhotoIndex !== null ? displayImages[activePhotoIndex] : null;
 
   return (
     <section id="gallery" className="gallery-section section-paper">
       <div className="section-inner wide reveal">
-        <p className="eyebrow">A FEW MOMENTS OF JOY</p>
-        <h2>Our Celebration</h2>
+        <p className="eyebrow">{t('gallery.eyebrow', 'A FEW MOMENTS OF JOY')}</p>
+        <h2>{t('gallery.title', 'Our Celebration')}</h2>
         <p className="gallery-lead">
-          Snapshots of warmth, laughter, and timeless traditions on our journey to forever.
+          {t('gallery.lead', 'Snapshots of warmth, laughter, and timeless traditions on our journey to forever.')}
         </p>
 
         <div className="photo-collage" role="region" aria-label="Wedding Photo Celebration Gallery">
-          {GALLERY_IMAGES.map((img, index) => {
+          {displayImages.map((img, index) => {
             const isLandscape = img.orientation === 'landscape';
             return (
               <button
@@ -216,7 +230,7 @@ function Gallery() {
                 key={img.id}
                 className={`collage-item ${isLandscape ? 'is-landscape' : 'is-portrait'} ${img.desktopClass} ${img.mobileOrderClass}`}
                 onClick={() => openLightbox(index)}
-                aria-label={`View ${img.title} photo full size`}
+                aria-label={`${t('gallery.viewFullSize', 'View photo full size')}: ${img.title}`}
               >
                 <img
                   src={img.src}
@@ -235,7 +249,7 @@ function Gallery() {
                 <div className="collage-card-overlay">
                   <div className="collage-card-top-bar">
                     <span className="collage-badge">{img.badge}</span>
-                    <span className="collage-expand-btn" aria-hidden="true" title="Expand photo">
+                    <span className="collage-expand-btn" aria-hidden="true" title={t('gallery.viewFullSize', 'Expand photo')}>
                       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                         <polyline points="15 3 21 3 21 9" />
                         <polyline points="9 21 3 21 3 15" />
@@ -275,8 +289,8 @@ function Gallery() {
               type="button"
               className="lightbox-close-btn"
               onClick={closeLightbox}
-              aria-label="Close photo preview"
-              title="Close preview (Esc)"
+              aria-label={t('gallery.closePreview', 'Close preview')}
+              title={t('gallery.closePreview', 'Close preview (Esc)')}
             >
               &times;
             </button>
@@ -285,8 +299,8 @@ function Gallery() {
               type="button"
               className="lightbox-nav-btn lightbox-prev-btn"
               onClick={showPrev}
-              aria-label="Previous photo"
-              title="Previous photo (Left arrow)"
+              aria-label={t('gallery.prevPhoto', 'Previous photo')}
+              title={t('gallery.prevPhoto', 'Previous photo (Left arrow)')}
             >
               &#8249;
             </button>
@@ -305,8 +319,8 @@ function Gallery() {
               type="button"
               className="lightbox-nav-btn lightbox-next-btn"
               onClick={showNext}
-              aria-label="Next photo"
-              title="Next photo (Right arrow)"
+              aria-label={t('gallery.nextPhoto', 'Next photo')}
+              title={t('gallery.nextPhoto', 'Next photo (Right arrow)')}
             >
               &#8250;
             </button>
@@ -317,7 +331,7 @@ function Gallery() {
                 <p className="lightbox-subtitle">{activePhoto.subtitle}</p>
               </div>
               <span className="lightbox-counter">
-                {activePhotoIndex + 1} / {GALLERY_IMAGES.length}
+                {activePhotoIndex + 1} / {displayImages.length}
               </span>
             </div>
           </div>

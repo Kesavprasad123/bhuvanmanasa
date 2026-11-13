@@ -1,9 +1,11 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import ScratchCard from './ScratchCard';
+import { useLanguage } from '../context/LanguageContext';
 
 const WEDDING_DATE = new Date('2026-12-12T20:26:00+05:30').getTime();
 
 function Countdown({ autoReveal = false }) {
+  const { t } = useLanguage();
   const [time, setTime] = useState({ days: '00', hours: '00', minutes: '00', seconds: '00' });
   const [stage, setStage] = useState('scratch'); // 'scratch' | 'countdown'
   const [leaving, setLeaving] = useState(false);
@@ -95,38 +97,38 @@ function Countdown({ autoReveal = false }) {
               </span>
             </div>
 
-            <p className="eyebrow">A LITTLE SURPRISE</p>
-            <h2>Until We Say &ldquo;I Do&rdquo;</h2>
-            <p className="scratch-subtitle">Scratch to reveal our special date</p>
+            <p className="eyebrow">{t('countdown.surprise', 'A LITTLE SURPRISE')}</p>
+            <h2>{t('countdown.until', 'Until We Say "I Do"')}</h2>
+            <p className="scratch-subtitle">{t('countdown.scratchSubtitle', 'Scratch to reveal our special date')}</p>
 
             <ScratchCard onRevealed={handleRevealed} autoReveal={autoReveal} />
 
             <p className="scratch-hint">
-              Use your finger or mouse to gently scratch the golden layer
+              {t('countdown.scratchHint', 'Use your finger or mouse to gently scratch the golden layer')}
             </p>
           </div>
         ) : (
           <div className="countdown-stage">
-            <h2>Counting Every Moment 💗</h2>
+            <h2>{t('countdown.counting', 'Counting Every Moment 💗')}</h2>
             <div className="countdown">
               <div>
                 <strong id="days">{time.days}</strong>
-                <span>Days</span>
+                <span>{t('countdown.days', 'Days')}</span>
               </div>
               <div>
                 <strong id="hours">{time.hours}</strong>
-                <span>Hours</span>
+                <span>{t('countdown.hours', 'Hours')}</span>
               </div>
               <div>
                 <strong id="minutes">{time.minutes}</strong>
-                <span>Minutes</span>
+                <span>{t('countdown.minutes', 'Minutes')}</span>
               </div>
               <div>
                 <strong id="seconds">{time.seconds}</strong>
-                <span>Seconds</span>
+                <span>{t('countdown.seconds', 'Seconds')}</span>
               </div>
             </div>
-            <p className="telugu">మా కల్యాణ వేడుకకు మీ రాకే మా ఆనందం</p>
+            <p className="telugu">{t('countdown.welcomeMessage', 'మా కల్యాణ వేడుకకు మీ రాకే మా ఆనందం')}</p>
           </div>
         )}
       </div>

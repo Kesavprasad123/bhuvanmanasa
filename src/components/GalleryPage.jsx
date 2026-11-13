@@ -1,6 +1,8 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import MusicToggle from './MusicToggle';
 import useScrollReveal from '../hooks/useScrollReveal';
+import { useLanguage } from '../context/LanguageContext';
+import LanguageSelector from './LanguageSelector';
 import '../styles/gallery.css';
 
 const BASE = import.meta.env.BASE_URL || './';
@@ -280,6 +282,7 @@ function GalleryPage({
   onPauseMusic,
   onResumeMusic,
 }) {
+  const { t } = useLanguage();
   const [activeCategory, setActiveCategory] = useState('all');
   const [activePhoto, setActivePhoto] = useState(null);
   const [playingVideoId, setPlayingVideoId] = useState(null);
@@ -385,13 +388,16 @@ function GalleryPage({
 
       {/* Top Header */}
       <header className="gallery-topbar">
-        <button
-          type="button"
-          className="gallery-nav-link"
-          onClick={onBackToInvitation}
-        >
-          ← Invitation
-        </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <button
+            type="button"
+            className="gallery-nav-link"
+            onClick={onBackToInvitation}
+          >
+            {t('galleryPage.invitation', '← Invitation')}
+          </button>
+          <LanguageSelector variant="topbar" />
+        </div>
 
         <div className="gallery-topbar-actions">
           {onNavigateToAccommodation && (
@@ -400,7 +406,7 @@ function GalleryPage({
               className="gallery-nav-link"
               onClick={onNavigateToAccommodation}
             >
-              విడిది ఇల్లు (Stay)
+              {t('galleryPage.stayLink', 'విడిది ఇల్లు (Stay)')}
             </button>
           )}
 

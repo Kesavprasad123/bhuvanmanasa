@@ -1,4 +1,5 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
+import { useLanguage } from '../context/LanguageContext';
 
 const BLAST_SYMBOLS = ['❀', '✿', '❁', '✦', '✧', '•'];
 const BLAST_COLORS = ['#d99aa3', '#bd8a42', '#e4c994', '#aab59b', '#8e3045'];
@@ -20,6 +21,7 @@ const STATIC_BLAST = [
 ];
 
 function Opening({ isOpen: siteOpen, onOpen }) {
+  const { t } = useLanguage();
   const [envelopeOpen, setEnvelopeOpen] = useState(false);
   const [exiting, setExiting] = useState(false);
   const [hidden, setHidden] = useState(false);
@@ -95,24 +97,24 @@ function Opening({ isOpen: siteOpen, onOpen }) {
 
       <div className="opening-content">
         <div className="ganesha">ॐ</div>
-        <p className="mantra">॥ శ్రీ గణేశాయ నమః ॥</p>
-        <p className="invite-label">A BEAUTIFUL BEGINNING AWAITS</p>
+        <p className="mantra">{t('opening.mantra', '॥ శ్రీ గణేశాయ నమః ॥')}</p>
+        <p className="invite-label">{t('opening.eyebrow', 'A BEAUTIFUL BEGINNING AWAITS')}</p>
 
         <button
           id="openEnvelope"
           className={`envelope-button${envelopeOpen ? ' open' : ''}`}
-          aria-label="Open wedding invitation"
+          aria-label={t('opening.ariaOpen', 'Open wedding invitation')}
           onClick={handleTriggerOpen}
           onTouchEnd={handleTriggerOpen}
           style={{ touchAction: 'manipulation' }}
         >
           <div className="letter">
             <div className="letter-border">
-              <span className="letter-small">THE WEDDING OF</span>
+              <span className="letter-small">{t('opening.theWeddingOf', 'THE WEDDING OF')}</span>
               <strong>
                 <span>B</span> <em>&hearts;</em> <span>M</span>
               </strong>
-              <span className="letter-date">12 • 12 • 2026</span>
+              <span className="letter-date">{t('opening.date', '12 • 12 • 2026')}</span>
             </div>
           </div>
 
@@ -173,7 +175,7 @@ function Opening({ isOpen: siteOpen, onOpen }) {
           </div>
         </button>
 
-        <h1>You're Invited</h1>
+        <h1>{t('opening.invited', "You're Invited")}</h1>
         <br />
         <p
           className="tap-hint"
@@ -181,7 +183,7 @@ function Opening({ isOpen: siteOpen, onOpen }) {
           onTouchEnd={handleTriggerOpen}
           style={{ cursor: 'pointer', touchAction: 'manipulation' }}
         >
-          Tap the envelope to open our invitation
+          {t('opening.tapHint', 'Tap the envelope to open our invitation')}
         </p>
         <br />
         <br />

@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
+import { useLanguage } from '../context/LanguageContext';
+import LanguageSelector from './LanguageSelector';
 import { PROPERTIES } from '../data/accommodation';
 import {
   bookingConfigured,
@@ -179,6 +181,7 @@ function Accommodation({
   onBackToInvitation,
   onNavigateToGallery,
 } = {}) {
+  const { t } = useLanguage();
   const [homeHref, setHomeHref] = useState(getHomeHref);
   const [internalDark, setInternalDark] = useState(getStoredTheme);
 
@@ -319,9 +322,12 @@ function Accommodation({
 
       {/* Top Bar Navigation */}
       <header className="acc-topbar">
-        <a className="acc-home-link" href={homeHref} onClick={handleBackToInvitation}>
-          ← Invitation
-        </a>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <a className="acc-home-link" href={homeHref} onClick={handleBackToInvitation}>
+            {t('accommodation.invitation', '← Invitation')}
+          </a>
+          <LanguageSelector variant="topbar" />
+        </div>
 
         <div className="acc-topbar-actions">
           {onNavigateToGallery && (
@@ -330,7 +336,7 @@ function Accommodation({
               className="acc-host-link"
               onClick={onNavigateToGallery}
             >
-              🎥 చిత్రమాలిక &amp; వీడియోలు
+              {t('accommodation.galleryLink', '🎥 చిత్రమాలిక & వీడియోలు')}
             </button>
           )}
 
@@ -341,7 +347,7 @@ function Accommodation({
               onClick={() => setShowLogin(true)}
               title="Host and Admin access to allocate and manage rooms"
             >
-              🔒 Host / Admin Login
+              {t('accommodation.hostAdminLogin', '🔒 Host / Admin Login')}
             </button>
           ) : (
             <>
@@ -351,17 +357,17 @@ function Accommodation({
                 onClick={handleScrollToForm}
                 title="Jump to Create Room Entry form"
               >
-                ➕ Allocate Room
+                {t('accommodation.allocateRoom', '➕ Allocate Room')}
               </button>
               <span className={`acc-host-mode-pill${isAdmin ? ' is-admin' : ''}`}>
-                {isAdmin ? '🛡️ Admin Mode' : '👑 Host Mode'}
+                {isAdmin ? t('accommodation.adminMode', '🛡️ Admin Mode') : t('accommodation.hostMode', '👑 Host Mode')}
               </span>
               <button
                 type="button"
                 className="acc-host-link is-logout"
                 onClick={handleLogout}
               >
-                Logout
+                {t('accommodation.logout', 'Logout')}
               </button>
             </>
           )}
@@ -382,7 +388,7 @@ function Accommodation({
         {/* Hero Section */}
         <section className="acc-hero">
           <p className="eyebrow">BHUVAN &amp; MANASA · 12 DECEMBER 2026</p>
-          <h1>Wedding Accommodation</h1>
+          <h1>{t('accommodation.pageTitle', 'Wedding Accommodation')}</h1>
           <p className="acc-subtitle">
             Comfortable stay arranged for our beloved family and guests.
           </p>
