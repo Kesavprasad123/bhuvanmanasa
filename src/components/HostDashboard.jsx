@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { PROPERTIES } from '../data/accommodation.js';
 import {
+  clearVacantEntries,
   deleteTrackerEntry,
   fetchTrackerEntries,
   fetchTrackerStats,
@@ -160,17 +161,28 @@ export default function HostDashboard({
   const handleSubmitForm = async (targetStatus = 'occupied') => {
     setFormError('');
 
-    if (!roomNumber.trim() && targetStatus === 'occupied') {
-      setFormError('Please enter the Room Number assigned.');
+    const cleanRoom = roomNumber.trim();
+    const cleanGuest = guestName.trim();
+    const cleanPhone = guestPhone.trim();
+
+    // If completely blank and user clicks Allocate or Mark as Vacant, reject immediately
+    if (!cleanRoom && !cleanGuest && !cleanPhone) {
+      setFormError('Please enter the Room Num Assigned and Guest Name.');
       return;
     }
 
-    if (!guestName.trim() && targetStatus === 'occupied') {
+    // Room number is strictly required for both occupied and vacant entries
+    if (!cleanRoom) {
+      setFormError('Please enter the Room Num Assigned.');
+      return;
+    }
+
+    if (!cleanGuest && targetStatus === 'occupied') {
       setFormError('Please enter the Guest Name.');
       return;
     }
 
-    if (guestPhone.trim() && guestPhone.trim().length !== 10) {
+    if (cleanPhone && cleanPhone.length !== 10) {
       setFormError('Please enter a valid 10-digit mobile number.');
       return;
     }
@@ -180,9 +192,9 @@ export default function HostDashboard({
       await saveTrackerEntry({
         id: editingId,
         propertyId: formPropertyId,
-        guestName: guestName.trim(),
-        guestPhone: guestPhone.trim(),
-        roomNumber: roomNumber.trim(),
+        guestName: cleanGuest,
+        guestPhone: cleanPhone,
+        roomNumber: cleanRoom,
         checkIn,
         checkOut,
         status: targetStatus,
@@ -191,8 +203,8 @@ export default function HostDashboard({
       loadEntries();
       showToast(
         targetStatus === 'occupied'
-          ? `✓ Room ${roomNumber.trim()} allocated to ${guestName.trim()}!`
-          : `✓ Room ${roomNumber.trim() || 'entry'} marked as Vacant.`
+          ? `✓ Room ${cleanRoom} allocated to ${cleanGuest}!`
+          : `✓ Room ${cleanRoom} marked as Vacant.`
       );
       resetForm();
     } catch (err) {
@@ -224,6 +236,27 @@ export default function HostDashboard({
       showToast('Entry removed from tracker.');
     } catch (err) {
       showToast('Could not delete entry: ' + err.message);
+    }
+  };
+
+  // Clear all vacant entries
+  const handleClearAllVacant = async () => {
+    if (!isHost) return;
+    const count = stats.totalVacant;
+    if (count === 0) return;
+    if (
+      !window.confirm(
+        `Are you sure you want to remove all ${count} vacant entries from the tracker?`
+      )
+    ) {
+      return;
+    }
+    try {
+      await clearVacantEntries(activePropertyId === 'all' ? null : activePropertyId);
+      loadEntries();
+      showToast(`Cleared ${count} vacant entries.`);
+    } catch (err) {
+      showToast('Could not clear vacant entries: ' + err.message);
     }
   };
 
@@ -587,6 +620,21 @@ export default function HostDashboard({
               >
                 🟢 Vacant ({stats.totalVacant})
               </button>
+              {statusFilter === 'vacant' && stats.totalVacant > 0 && (
+                <button
+                  type="button"
+                  className="acc-filter-pill acc-clear-vacant-btn"
+                  onClick={handleClearAllVacant}
+                  title="Remove all vacant room entries"
+                  style={{
+                    background: 'rgba(239, 68, 68, 0.15)',
+                    borderColor: 'rgba(239, 68, 68, 0.4)',
+                    color: '#fca5a5',
+                  }}
+                >
+                  🗑️ Clear All Vacant ({stats.totalVacant})
+                </button>
+              )}
             </div>
           )}
         </div>

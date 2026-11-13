@@ -89,7 +89,24 @@ export function fetchTrackerEntries() {
     const raw = localStorage.getItem(TRACKER_STORAGE_KEY);
     if (!raw) return [];
     const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed : [];
+    if (!Array.isArray(parsed)) return [];
+
+    // Filter out corrupted / empty entries that have no valid room number
+    const valid = parsed.filter(
+      (entry) =>
+        entry &&
+        typeof entry.roomNumber === 'string' &&
+        entry.roomNumber.trim().length > 0 &&
+        entry.roomNumber.trim().toLowerCase() !== 'not assigned' &&
+        entry.roomNumber.trim().toLowerCase() !== 'undefined' &&
+        entry.roomNumber.trim().toLowerCase() !== 'null'
+    );
+
+    // If invalid/empty entries were found, immediately sync cleaned list back
+    if (valid.length !== parsed.length) {
+      writeTrackerEntries(valid);
+    }
+    return valid;
   } catch {
     return [...memoryStore];
   }
@@ -249,8 +266,12 @@ export async function saveTrackerEntry({
   const cleanPhone = String(guestPhone || '').replace(/\D/g, '').slice(0, 10);
   const cleanStatus = status === 'vacant' ? 'vacant' : 'occupied';
 
-  if (!cleanRoom && cleanStatus === 'occupied') {
+  if (!cleanRoom) {
     throw new Error('Please enter a room number.');
+  }
+
+  if (!cleanName && cleanStatus === 'occupied') {
+    throw new Error('Please enter the guest name.');
   }
 
   const entries = fetchTrackerEntries();
@@ -316,6 +337,19 @@ export async function toggleEntryStatus(id) {
 export async function deleteTrackerEntry(id) {
   const entries = fetchTrackerEntries();
   const filtered = entries.filter((e) => e.id !== id);
+  writeTrackerEntries(filtered);
+  return filtered;
+}
+
+/**
+ * Clears all vacant entries from the tracker.
+ */
+export async function clearVacantEntries(propertyId = null) {
+  const entries = fetchTrackerEntries();
+  const filtered = entries.filter((e) => {
+    if (propertyId && propertyId !== 'all' && e.propertyId !== propertyId) return true;
+    return e.status !== 'vacant';
+  });
   writeTrackerEntries(filtered);
   return filtered;
 }
