@@ -1,4 +1,5 @@
 import useScrollReveal from '../hooks/useScrollReveal';
+import useAutoScrollInvitation from '../hooks/useAutoScrollInvitation';
 import MusicToggle from './MusicToggle';
 import FloatingNav from './FloatingNav';
 import Hero from './Hero';
@@ -23,6 +24,7 @@ function MainInvitation({
   onResumeMusic,
 }) {
   useScrollReveal(true);
+  const { scratchAutoReveal, startAutoScroll } = useAutoScrollInvitation();
 
   return (
     <main id="site">
@@ -33,8 +35,8 @@ function MainInvitation({
         onNavigateToAccommodation={onNavigateToAccommodation}
         onNavigateToGallery={onNavigateToGallery}
       />
-      <Hero />
-      <Countdown />
+      <Hero onExplore={startAutoScroll} />
+      <Countdown autoReveal={scratchAutoReveal} />
       <Families />
       <Events />
       <HomeVideoSection

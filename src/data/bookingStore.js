@@ -1,80 +1,112 @@
 /**
- * Room booking and dynamic allocation store for the accommodation page.
+ * Wedding Accommodation Room Allocation Tracker Store.
  *
- * Supports two stay locations:
- * 1. Krishna Inn (8 rooms)
- * 2. SVPC (Wedding Convention) (8 rooms)
- *
- * Security & Access Control:
- * - Public viewers only see high-level availability (total, occupied count, available count,
- *   and individual room occupied/available status). Guest names are NEVER exposed publicly.
- * - Only the authenticated host with the 4-digit PIN code can view guest details,
- *   dynamically allocate rooms, toggle occupied/available status, and update dates.
- *
- * Persistence & Real-time Sync:
- * - Supports dual-mode: Supabase backend when credentials are present,
- *   plus local persistent storage with cross-tab BroadcastChannel synchronization.
+ * Designed for the wedding host/brother to dynamically track
+ * guest room allocations across two stay locations:
+ * 1. Krishna Inn (Flexible timings on 12 Dec 2026)
+ * 2. SVPC Convention Hall 1 (Wedding Hall, 12 Dec 2026 9:00 AM to 13 Dec 2026 7:00 AM)
  */
 
-import { CHECK_IN_TIME, CHECK_OUT_TIME, PROPERTIES } from './accommodation';
+import { PROPERTIES } from './accommodation.js';
 
 const env = typeof import.meta !== 'undefined' && import.meta.env ? import.meta.env : {};
-const SUPABASE_URL = String(env.VITE_SUPABASE_URL || '').replace(/\/+$/, '');
-const SUPABASE_KEY = env.VITE_SUPABASE_ANON_KEY || '';
 
 const SESSION_STORAGE_KEY = 'weddingAccommodationHostSession';
-const LOCAL_DB_KEY = 'wedding_accommodation_bookings_v2';
-const HOST_PIN_KEY = 'wedding_host_pin_code';
-const SYNC_CHANNEL_NAME = 'wedding_accommodation_sync';
+export const TRACKER_STORAGE_KEY = 'wedding_accommodation_tracker_v5';
+const HOST_PIN_KEY = 'wedding_host_pin_code_v5';
+const ADMIN_PIN_KEY = 'wedding_admin_pin_code_v5';
+const SYNC_CHANNEL_NAME = 'wedding_accommodation_sync_v5';
 
-// Default 4-digit host PIN (can be customized by host)
-export const DEFAULT_HOST_PIN = '1212';
+// Default 4-digit passcodes
+const DEFAULT_HOST_PIN = '9229';
+const DEFAULT_ADMIN_PIN = '1968';
 
-/** True when Supabase credentials are provided in the environment. */
-export const supabaseConfigured = Boolean(SUPABASE_URL && SUPABASE_KEY);
-
-/** Booking backend is always active (either Supabase or local sync engine). */
 export const bookingConfigured = true;
+const WRONG_PIN = 'Incorrect passcode. Please try again.';
 
-const UNAVAILABLE = 'Could not reach the booking service. Please try again.';
-const SETUP_REQUIRED = 'Booking is not set up yet — run supabase/setup.sql in Supabase, then reload this page.';
-const WRONG_PIN = 'Invalid 4-digit access code. Please try again.';
+/* ---------------------------------------------------------------- Passcode Management */
 
-/* ---------------------------------------------------------------- Default Seed Data */
-
-export const DEFAULT_SEED_BOOKINGS = [
-  // Krishna Inn (Rooms 1 to 8)
-  { id: 'b1', property_id: 'krishna-inn', room: '1', guest_name: 'Sridhar', check_in: '2026-12-10', check_out: '2026-12-13', status: 'active', check_in_time: CHECK_IN_TIME, check_out_time: CHECK_OUT_TIME, updated_at: '2026-10-28T09:00:00Z' },
-  { id: 'b2', property_id: 'krishna-inn', room: '2', guest_name: 'Radha Krisha', check_in: '2026-12-12', check_out: '2026-12-13', status: 'active', check_in_time: CHECK_IN_TIME, check_out_time: CHECK_OUT_TIME, updated_at: '2026-10-28T09:00:00Z' },
-  { id: 'b3', property_id: 'krishna-inn', room: '3', guest_name: 'K Subbarao', check_in: '2026-12-12', check_out: '2026-12-13', status: 'active', check_in_time: CHECK_IN_TIME, check_out_time: CHECK_OUT_TIME, updated_at: '2026-10-28T09:00:00Z' },
-  { id: 'b4', property_id: 'krishna-inn', room: '4', guest_name: 'Shekar, Surya', check_in: '2026-12-12', check_out: '2026-12-13', status: 'active', check_in_time: CHECK_IN_TIME, check_out_time: CHECK_OUT_TIME, updated_at: '2026-10-28T09:00:00Z' },
-  { id: 'b5', property_id: 'krishna-inn', room: '5', guest_name: 'Additional', check_in: '2026-12-12', check_out: '2026-12-13', status: 'active', check_in_time: CHECK_IN_TIME, check_out_time: CHECK_OUT_TIME, updated_at: '2026-10-28T09:00:00Z' },
-  { id: 'b6', property_id: 'krishna-inn', room: '6', guest_name: 'Teja - Director', check_in: '2026-12-11', check_out: '2026-12-13', status: 'active', check_in_time: CHECK_IN_TIME, check_out_time: CHECK_OUT_TIME, updated_at: '2026-10-28T09:00:00Z' },
-  { id: 'b7', property_id: 'krishna-inn', room: '7', guest_name: 'Teja - Dheeraj', check_in: '2026-12-12', check_out: '2026-12-13', status: 'active', check_in_time: CHECK_IN_TIME, check_out_time: CHECK_OUT_TIME, updated_at: '2026-10-28T09:00:00Z' },
-  { id: 'b8', property_id: 'krishna-inn', room: '8', guest_name: 'Teja - Hari & Kranthi', check_in: '2026-12-12', check_out: '2026-12-13', status: 'active', check_in_time: CHECK_IN_TIME, check_out_time: CHECK_OUT_TIME, updated_at: '2026-10-28T09:00:00Z' },
-
-  // SVPC (Wedding Convention) (Rooms 1 to 8)
-  { id: 'b9', property_id: 'svpc', room: '1', guest_name: 'Aneel, Bala, Shiva', check_in: '2026-12-12', check_out: '2026-12-13', status: 'active', check_in_time: CHECK_IN_TIME, check_out_time: CHECK_OUT_TIME, updated_at: '2026-10-28T09:00:00Z' },
-  { id: 'b10', property_id: 'svpc', room: '2', guest_name: 'Shristi', check_in: '2026-12-12', check_out: '2026-12-13', status: 'active', check_in_time: CHECK_IN_TIME, check_out_time: CHECK_OUT_TIME, updated_at: '2026-10-28T09:00:00Z' },
-  { id: 'b11', property_id: 'svpc', room: '3', guest_name: 'Btech Boys', check_in: '2026-12-12', check_out: '2026-12-13', status: 'active', check_in_time: CHECK_IN_TIME, check_out_time: CHECK_OUT_TIME, updated_at: '2026-10-28T09:00:00Z' },
-  { id: 'b12', property_id: 'svpc', room: '4', guest_name: 'Btech Girls', check_in: '2026-12-12', check_out: '2026-12-13', status: 'active', check_in_time: CHECK_IN_TIME, check_out_time: CHECK_OUT_TIME, updated_at: '2026-10-28T09:00:00Z' },
-  { id: 'b13', property_id: 'svpc', room: '5', guest_name: 'Btech Girls', check_in: '2026-12-12', check_out: '2026-12-13', status: 'active', check_in_time: CHECK_IN_TIME, check_out_time: CHECK_OUT_TIME, updated_at: '2026-10-28T09:00:00Z' },
-  { id: 'b14', property_id: 'svpc', room: '6', guest_name: 'Manisha, Teja, Shylu', check_in: '2026-12-12', check_out: '2026-12-13', status: 'active', check_in_time: CHECK_IN_TIME, check_out_time: CHECK_OUT_TIME, updated_at: '2026-10-28T09:00:00Z' },
-  { id: 'b15', property_id: 'svpc', room: '7', guest_name: 'Chanti Frnds', check_in: '2026-12-12', check_out: '2026-12-13', status: 'active', check_in_time: CHECK_IN_TIME, check_out_time: CHECK_OUT_TIME, updated_at: '2026-10-28T09:00:00Z' },
-  { id: 'b16', property_id: 'svpc', room: '8', guest_name: 'Chanti Frnds', check_in: '2026-12-12', check_out: '2026-12-13', status: 'active', check_in_time: CHECK_IN_TIME, check_out_time: CHECK_OUT_TIME, updated_at: '2026-10-28T09:00:00Z' },
-];
-
-/* ---------------------------------------------------------------- Host PIN & Storage */
+let memoryHostPin = null;
+let memoryAdminPin = null;
 
 export function getHostPin() {
   try {
-    const custom = localStorage.getItem(HOST_PIN_KEY);
-    if (custom && /^\d{4}$/.test(custom)) return custom;
+    if (typeof localStorage !== 'undefined') {
+      const custom = localStorage.getItem(HOST_PIN_KEY);
+      if (custom && /^\d{4}$/.test(custom)) return custom;
+    } else if (memoryHostPin) {
+      return memoryHostPin;
+    }
   } catch {}
   return String(env.VITE_HOST_PIN || DEFAULT_HOST_PIN);
 }
 
+export function getAdminPin() {
+  try {
+    if (typeof localStorage !== 'undefined') {
+      const custom = localStorage.getItem(ADMIN_PIN_KEY);
+      if (custom && /^\d{4}$/.test(custom)) return custom;
+    } else if (memoryAdminPin) {
+      return memoryAdminPin;
+    }
+  } catch {}
+  return String(env.VITE_ADMIN_PIN || DEFAULT_ADMIN_PIN);
+}
+
+/**
+ * Updates passcodes for Host and/or Admin.
+ * Strictly restricted to Admin authorization (verified by current Admin passcode).
+ */
+export function updatePasscodes({ currentAdminPin, newHostPin, newAdminPin }) {
+  const activeAdminPin = getAdminPin();
+  if (String(currentAdminPin || '').trim() !== activeAdminPin) {
+    throw new Error('Current Admin Passcode is incorrect.');
+  }
+
+  let updatedAny = false;
+
+  if (newHostPin) {
+    const cleanHost = String(newHostPin).trim();
+    if (!/^\d{4}$/.test(cleanHost)) {
+      throw new Error('New Host Passcode must be exactly 4 digits.');
+    }
+    try {
+      memoryHostPin = cleanHost;
+      if (typeof localStorage !== 'undefined') {
+        localStorage.setItem(HOST_PIN_KEY, cleanHost);
+      }
+      updatedAny = true;
+    } catch {
+      throw new Error('Failed to update Host passcode in storage.');
+    }
+  }
+
+  if (newAdminPin) {
+    const cleanAdmin = String(newAdminPin).trim();
+    if (!/^\d{4}$/.test(cleanAdmin)) {
+      throw new Error('New Admin Passcode must be exactly 4 digits.');
+    }
+    try {
+      memoryAdminPin = cleanAdmin;
+      if (typeof localStorage !== 'undefined') {
+        localStorage.setItem(ADMIN_PIN_KEY, cleanAdmin);
+      }
+      updatedAny = true;
+    } catch {
+      throw new Error('Failed to update Admin passcode in storage.');
+    }
+  }
+
+  if (!updatedAny) {
+    throw new Error('Please enter at least one new passcode to update.');
+  }
+
+  broadcastSync();
+  return { success: true };
+}
+
 export function setHostPin(currentPin, newPin) {
+  // Backward compatibility wrapper
   const activePin = getHostPin();
   if (String(currentPin).trim() !== activePin) {
     throw new Error('Current PIN is incorrect.');
@@ -86,39 +118,128 @@ export function setHostPin(currentPin, newPin) {
   try {
     localStorage.setItem(HOST_PIN_KEY, cleanNew);
     broadcastSync();
-  } catch (err) {
+  } catch {
     throw new Error('Failed to update PIN in local storage.');
   }
 }
 
-function readLocalBookings() {
+/* ---------------------------------------------------------------- Tracker Storage Engine */
+
+const MIGRATION_KEY = 'wedding_tracker_v5_migrated';
+const EMPTY_PURGE_MIGRATION_KEY = 'wedding_tracker_empty_purged_v3';
+
+/**
+ * Determines if a tracker entry is empty, incomplete, or corrupted.
+ * An entry is empty if it lacks a valid room number or lacks a valid guest name.
+ */
+export function isEntryEmpty(entry) {
+  if (!entry || typeof entry !== 'object') return true;
+
+  const room = String(entry.roomNumber || '').trim();
+  const guest = String(entry.guestName || '').trim();
+
+  // Room must be non-empty and not a placeholder
+  if (!room || /^(not assigned|undefined|null|n\/a|none)$/i.test(room)) {
+    return true;
+  }
+
+  // Guest name must be non-empty and not a placeholder
+  if (!guest || /^(name not specified|unnamed|undefined|null|n\/a|none)$/i.test(guest)) {
+    return true;
+  }
+
+  return false;
+}
+
+export function isEntryValid(entry) {
+  return !isEntryEmpty(entry);
+}
+
+function cleanOldStorage() {
   try {
-    const raw = localStorage.getItem(LOCAL_DB_KEY);
-    if (!raw) {
-      localStorage.setItem(LOCAL_DB_KEY, JSON.stringify(DEFAULT_SEED_BOOKINGS));
-      return DEFAULT_SEED_BOOKINGS;
+    if (!localStorage.getItem(MIGRATION_KEY)) {
+      // Clear all legacy mock rooms keys
+      localStorage.removeItem('wedding_accommodation_bookings_v2');
+      localStorage.removeItem('wedding_accommodation_v3_migrated');
+      localStorage.removeItem('wedding_host_pin_code');
+      localStorage.removeItem(TRACKER_STORAGE_KEY);
+      localStorage.setItem(MIGRATION_KEY, '1');
+      localStorage.setItem(HOST_PIN_KEY, DEFAULT_HOST_PIN);
+      localStorage.setItem(ADMIN_PIN_KEY, DEFAULT_ADMIN_PIN);
     }
-    const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed) || parsed.length === 0) {
-      localStorage.setItem(LOCAL_DB_KEY, JSON.stringify(DEFAULT_SEED_BOOKINGS));
-      return DEFAULT_SEED_BOOKINGS;
+
+    // Always wipe persistent session tokens so refreshing the page automatically logs out
+    try {
+      if (typeof localStorage !== 'undefined') localStorage.removeItem(SESSION_STORAGE_KEY);
+      if (typeof sessionStorage !== 'undefined') sessionStorage.removeItem(SESSION_STORAGE_KEY);
+    } catch {
+      // ignore
     }
-    return parsed;
+
+    // Force purge all empty entries from storage immediately
+    const raw = localStorage.getItem(TRACKER_STORAGE_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) {
+        const cleaned = parsed.filter(isEntryValid);
+        if (cleaned.length !== parsed.length) {
+          localStorage.setItem(TRACKER_STORAGE_KEY, JSON.stringify(cleaned));
+        }
+      }
+    }
   } catch {
-    return DEFAULT_SEED_BOOKINGS;
+    // ignore
   }
 }
 
-function writeLocalBookings(bookings) {
+// Run cleanup immediately on load
+if (typeof window !== 'undefined') {
+  cleanOldStorage();
+}
+
+let memoryStore = [];
+
+/**
+ * Reads all tracker entries from local storage (or memory fallback in Node/SSR).
+ * Starts completely empty — no mock or pre-defined names!
+ */
+export function fetchTrackerEntries() {
   try {
-    localStorage.setItem(LOCAL_DB_KEY, JSON.stringify(bookings));
+    cleanOldStorage();
+    if (typeof localStorage === 'undefined') {
+      return memoryStore.filter(isEntryValid);
+    }
+    const raw = localStorage.getItem(TRACKER_STORAGE_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+
+    // Filter out all empty, incomplete, or corrupted entries
+    const valid = parsed.filter(isEntryValid);
+
+    // If invalid/empty entries were found, immediately sync cleaned list back
+    if (valid.length !== parsed.length) {
+      writeTrackerEntries(valid);
+    }
+    return valid;
+  } catch {
+    return memoryStore.filter(isEntryValid);
+  }
+}
+
+function writeTrackerEntries(entries) {
+  try {
+    memoryStore = [...entries];
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem(TRACKER_STORAGE_KEY, JSON.stringify(entries));
+    }
     broadcastSync();
   } catch (err) {
-    console.warn('Failed to save bookings to localStorage:', err);
+    console.warn('Failed to save entries to localStorage:', err);
   }
 }
 
-// Cross-tab synchronization
+// Cross-tab synchronization via BroadcastChannel & storage events
 let syncChannel = null;
 if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
   try {
@@ -143,7 +264,14 @@ export function subscribeToDatabaseChanges(callback) {
 
   const handleMessage = () => callback();
   const handleStorage = (event) => {
-    if (event.key === LOCAL_DB_KEY || event.key === HOST_PIN_KEY) callback();
+    if (
+      event.key === TRACKER_STORAGE_KEY ||
+      event.key === HOST_PIN_KEY ||
+      event.key === ADMIN_PIN_KEY ||
+      event.key === SESSION_STORAGE_KEY
+    ) {
+      callback();
+    }
   };
 
   if (syncChannel) {
@@ -159,447 +287,314 @@ export function subscribeToDatabaseChanges(callback) {
   };
 }
 
-/* ---------------------------------------------------------------- Supabase RPC */
-
-const headers = () => ({
-  apikey: SUPABASE_KEY,
-  Authorization: `Bearer ${SUPABASE_KEY}`,
-  'Content-Type': 'application/json',
-});
-
-async function rpc(name, body) {
-  if (!supabaseConfigured) {
-    throw new Error('Supabase not configured');
-  }
-
-  let response;
-  try {
-    response = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${name}`, {
-      method: 'POST',
-      headers: headers(),
-      body: JSON.stringify(body),
-    });
-  } catch {
-    throw new Error(UNAVAILABLE);
-  }
-
-  if (response.status === 404) throw new Error(SETUP_REQUIRED);
-  if (response.status === 401 || response.status === 403) throw new Error(UNAVAILABLE);
-
-  let payload = null;
-  try {
-    const text = await response.text();
-    payload = text ? JSON.parse(text) : null;
-  } catch {
-    payload = null;
-  }
-
-  if (!response.ok) {
-    const message = payload && typeof payload.message === 'string' ? payload.message : '';
-    if (response.status === 400 && message) {
-      if (/not set up yet/i.test(message)) throw new Error(SETUP_REQUIRED);
-      throw new Error(message);
-    }
-    throw new Error(UNAVAILABLE);
-  }
-
-  return payload;
-}
-
 /* ---------------------------------------------------------------- Session Management */
 
-function readSession() {
-  try {
-    return sessionStorage.getItem(SESSION_STORAGE_KEY) || '';
-  } catch {
-    return '';
-  }
+// In-memory session state (strictly resets to 'guest' on page refresh)
+let activeSessionRole = 'guest'; // 'guest' | 'host' | 'admin'
+let activeSessionToken = '';
+
+export function getActiveRole() {
+  return activeSessionRole;
 }
 
-function writeSession(token) {
+export function isHostLoggedIn() {
+  return activeSessionRole === 'host' || activeSessionRole === 'admin';
+}
+
+export function isAdminLoggedIn() {
+  return activeSessionRole === 'admin';
+}
+
+export async function loginUser(pin) {
+  const value = String(pin || '').trim();
+  if (!/^\d{4}$/.test(value)) {
+    throw new Error('Please enter the 4-digit passcode.');
+  }
+
+  const currentAdminPin = getAdminPin();
+  const currentHostPin = getHostPin();
+
+  if (value === currentAdminPin) {
+    activeSessionRole = 'admin';
+    activeSessionToken = 'admin_session_' + Math.random().toString(36).slice(2) + Date.now().toString(36);
+  } else if (value === currentHostPin) {
+    activeSessionRole = 'host';
+    activeSessionToken = 'host_session_' + Math.random().toString(36).slice(2) + Date.now().toString(36);
+  } else {
+    throw new Error(WRONG_PIN);
+  }
+
+  // Force wipe persistent storage to guarantee page refresh always logs out
   try {
-    if (token) sessionStorage.setItem(SESSION_STORAGE_KEY, token);
-    else sessionStorage.removeItem(SESSION_STORAGE_KEY);
+    if (typeof localStorage !== 'undefined') localStorage.removeItem(SESSION_STORAGE_KEY);
+    if (typeof sessionStorage !== 'undefined') sessionStorage.removeItem(SESSION_STORAGE_KEY);
+  } catch {
+    // ignore
+  }
+
+  return { role: activeSessionRole, token: activeSessionToken };
+}
+
+export async function loginHost(pin) {
+  const res = await loginUser(pin);
+  return res.token;
+}
+
+export async function logoutUser() {
+  activeSessionRole = 'guest';
+  activeSessionToken = '';
+  try {
+    if (typeof localStorage !== 'undefined') localStorage.removeItem(SESSION_STORAGE_KEY);
+    if (typeof sessionStorage !== 'undefined') sessionStorage.removeItem(SESSION_STORAGE_KEY);
   } catch {
     // ignore
   }
 }
 
-export function getSession() {
-  return readSession();
-}
-
-export function isHostLoggedIn() {
-  return Boolean(readSession());
-}
-
-export async function loginHost(pin) {
-  const value = String(pin || '').trim();
-  if (!/^\d{4}$/.test(value)) {
-    throw new Error('Please enter the 4-digit PIN code.');
-  }
-
-  if (supabaseConfigured) {
-    try {
-      const token = await rpc('host_login', { p_pin: value });
-      if (typeof token !== 'string' || !token) throw new Error(WRONG_PIN);
-      writeSession(token);
-      return token;
-    } catch (err) {
-      if (err.message === WRONG_PIN || err.message === SETUP_REQUIRED) {
-        throw err;
-      }
-      console.warn('Falling back to local host session:', err.message);
-    }
-  }
-
-  // Strict host PIN verification
-  const currentPin = getHostPin();
-  if (value !== currentPin) {
-    throw new Error(WRONG_PIN);
-  }
-
-  const localToken = 'host_session_' + Math.random().toString(36).slice(2) + Date.now().toString(36);
-  writeSession(localToken);
-  return localToken;
-}
-
 export async function logoutHost() {
-  const token = readSession();
-  writeSession('');
-  if (token && supabaseConfigured) {
-    try {
-      await rpc('host_logout', { p_token: token });
-    } catch {
-      // ignore
-    }
-  }
+  return logoutUser();
 }
 
 export async function restoreHostSession() {
-  const token = readSession();
-  if (!token) return '';
-
-  if (supabaseConfigured) {
-    try {
-      const valid = await rpc('host_session_valid', { p_token: token });
-      if (valid === true) return token;
-    } catch {
-      // fall through
-    }
-  }
-
-  if (token.startsWith('host_session_')) {
-    return token;
-  }
-
-  writeSession('');
-  return '';
+  // Resets to empty/logged-out on refresh
+  return activeSessionRole !== 'guest' ? { role: activeSessionRole, token: activeSessionToken } : null;
 }
 
 export function isSessionExpired(error) {
   return /session has expired|log in again/i.test((error && error.message) || '');
 }
 
-/* ------------------------------------------------------------- Public Availability */
+/* ---------------------------------------------------------------- Entry Tracker CRUD */
 
 /**
- * Returns `{ propertyId: { [room]: isOccupiedBoolean } }`.
- * Public guest view only has access to this data — NEVER private guest names.
+ * Saves or updates a room entry in the tracker.
+ *
+ * @param {Object} entry
+ * @param {string} [entry.id] - Optional ID for editing an existing entry
+ * @param {string} entry.propertyId - 'krishna-inn' | 'svpc'
+ * @param {string} entry.guestName - Name of the guest or family
+ * @param {string} [entry.guestPhone] - Contact phone number
+ * @param {string} entry.roomNumber - Assigned room number (e.g. "101", "Room 4")
+ * @param {string} [entry.checkIn] - Check-in date (YYYY-MM-DD)
+ * @param {string} [entry.checkOut] - Check-out date (YYYY-MM-DD)
+ * @param {'occupied'|'vacant'} [entry.status] - Status: 'occupied' or 'vacant'
  */
-export async function fetchAvailability() {
-  if (supabaseConfigured) {
-    try {
-      const rows = await rpc('get_availability', {});
-      const map = {};
-      (rows || []).forEach((row) => {
-        if (!map[row.property_id]) map[row.property_id] = {};
-        map[row.property_id][row.room] = Boolean(row.is_booked);
-      });
-      return map;
-    } catch (err) {
-      console.warn('Supabase get_availability unavailable, falling back to local DB:', err.message);
-    }
-  }
-
-  const bookings = readLocalBookings();
-  const map = {
-    'krishna-inn': {},
-    svpc: {},
-  };
-
-  PROPERTIES.forEach((prop) => {
-    prop.rooms.forEach((roomStr) => {
-      const hasActive = bookings.some(
-        (b) => b.property_id === prop.id && String(b.room) === String(roomStr) && b.status === 'active'
-      );
-      map[prop.id][roomStr] = hasActive;
-    });
-  });
-
-  return map;
-}
-
-/* ---------------------------------------------------------- Host Operations */
-
-/**
- * Returns all room allocation records. Host login required.
- */
-export async function fetchBookings() {
-  const token = readSession();
-  if (!token) throw new Error('Host login required.');
-
-  if (supabaseConfigured) {
-    try {
-      const rows = await rpc('get_bookings', { p_token: token });
-      return rows || [];
-    } catch (err) {
-      console.warn('Supabase get_bookings unavailable, reading local DB:', err.message);
-    }
-  }
-
-  return readLocalBookings();
-}
-
-/**
- * Dynamic room allocation: Updates guest name, occupancy status, and stay dates.
- */
-export async function saveRoomAllocation({
-  propertyId,
-  room,
+export async function saveTrackerEntry({
+  id = null,
+  propertyId = 'krishna-inn',
   guestName = '',
-  status = 'active',
+  guestPhone = '',
+  roomNumber = '',
   checkIn = '2026-12-12',
   checkOut = '2026-12-13',
+  status = 'occupied',
 }) {
-  const token = readSession();
-  if (!token) throw new Error('Host login required.');
-
-  const cleanRoom = String(room);
   const cleanName = String(guestName || '').trim();
-  const cleanStatus = status === 'active' || status === 'occupied' ? 'active' : 'cancelled';
+  const cleanRoom = String(roomNumber || '').trim();
+  const cleanPhone = String(guestPhone || '').replace(/\D/g, '').slice(0, 10);
+  const cleanStatus = status === 'vacant' ? 'vacant' : 'occupied';
 
-  if (supabaseConfigured) {
-    try {
-      // Find if booking already exists
-      const existingRows = await rpc('get_bookings', { p_token: token });
-      const target = (existingRows || []).find(
-        (b) => b.property_id === propertyId && String(b.room) === cleanRoom
-      );
-      if (target) {
-        await rpc('update_booking', {
-          p_token: token,
-          p_id: target.id,
-          p_room: cleanRoom,
-          p_guest: cleanName,
-          p_check_in: checkIn,
-          p_check_out: checkOut,
-        });
-        await rpc('set_booking_status', {
-          p_token: token,
-          p_id: target.id,
-          p_status: cleanStatus,
-        });
-      } else {
-        await rpc('create_booking', {
-          p_token: token,
-          p_property: propertyId,
-          p_room: cleanRoom,
-          p_guest: cleanName,
-          p_check_in: checkIn,
-          p_check_out: checkOut,
-        });
-      }
-    } catch (err) {
-      console.warn('Supabase write failed, falling back to local storage:', err.message);
+  if (!cleanRoom) {
+    throw new Error('Please enter a room number.');
+  }
+
+  if (!cleanName && cleanStatus === 'occupied') {
+    throw new Error('Please enter the guest name.');
+  }
+
+  const entries = fetchTrackerEntries();
+  const now = new Date().toISOString();
+
+  if (id) {
+    // Edit existing entry
+    const index = entries.findIndex((e) => e.id === id);
+    if (index >= 0) {
+      entries[index] = {
+        ...entries[index],
+        propertyId,
+        guestName: cleanName,
+        guestPhone: cleanPhone,
+        roomNumber: cleanRoom,
+        checkIn: checkIn || '2026-12-12',
+        checkOut: checkOut || '2026-12-13',
+        status: cleanStatus,
+        updatedAt: now,
+      };
+      writeTrackerEntries(entries);
+      return entries[index];
     }
   }
 
-  const bookings = readLocalBookings();
-  const index = bookings.findIndex(
-    (b) => b.property_id === propertyId && String(b.room) === cleanRoom
-  );
-
-  const now = new Date().toISOString();
-  if (index >= 0) {
-    bookings[index] = {
-      ...bookings[index],
-      guest_name: cleanName,
-      status: cleanStatus,
-      check_in: checkIn,
-      check_out: checkOut,
-      check_in_time: CHECK_IN_TIME,
-      check_out_time: CHECK_OUT_TIME,
-      updated_at: now,
-    };
-  } else {
-    bookings.push({
-      id: `alloc_${propertyId}_${cleanRoom}_${Date.now()}`,
-      property_id: propertyId,
-      room: cleanRoom,
-      guest_name: cleanName,
-      status: cleanStatus,
-      check_in: checkIn,
-      check_out: checkOut,
-      check_in_time: CHECK_IN_TIME,
-      check_out_time: CHECK_OUT_TIME,
-      updated_at: now,
-    });
-  }
-
-  writeLocalBookings(bookings);
-  return bookings;
-}
-
-/**
- * Toggles room status between active (Occupied) and cancelled (Available).
- */
-export async function toggleRoomStatus(propertyId, room) {
-  const token = readSession();
-  if (!token) throw new Error('Host login required.');
-
-  const cleanRoom = String(room);
-  const bookings = readLocalBookings();
-  const existing = bookings.find(
-    (b) => b.property_id === propertyId && String(b.room) === cleanRoom
-  );
-
-  const nextStatus = existing && existing.status === 'active' ? 'cancelled' : 'active';
-
-  return saveRoomAllocation({
+  // Create new entry
+  const newEntry = {
+    id: `entry_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
     propertyId,
-    room: cleanRoom,
-    guestName: existing ? existing.guest_name : '',
-    status: nextStatus,
-    checkIn: existing ? existing.check_in : '2026-12-12',
-    checkOut: existing ? existing.check_out : '2026-12-13',
-  });
+    guestName: cleanName,
+    guestPhone: cleanPhone,
+    roomNumber: cleanRoom,
+    checkIn: checkIn || '2026-12-12',
+    checkOut: checkOut || '2026-12-13',
+    status: cleanStatus,
+    createdAt: now,
+    updatedAt: now,
+  };
+
+  entries.unshift(newEntry); // Newest entries on top
+  writeTrackerEntries(entries);
+  return newEntry;
 }
 
 /**
- * Clears room allocation (empties guest name and marks Available).
+ * Toggles status between 'occupied' and 'vacant'.
  */
-export async function clearRoomAllocation(propertyId, room) {
-  return saveRoomAllocation({
-    propertyId,
-    room: String(room),
-    guestName: '',
-    status: 'cancelled',
-    checkIn: '2026-12-12',
-    checkOut: '2026-12-13',
-  });
+export async function toggleEntryStatus(id) {
+  const entries = fetchTrackerEntries();
+  const target = entries.find((e) => e.id === id);
+  if (!target) throw new Error('Entry not found');
+
+  target.status = target.status === 'occupied' ? 'vacant' : 'occupied';
+  target.updatedAt = new Date().toISOString();
+
+  writeTrackerEntries(entries);
+  return target;
 }
 
 /**
- * Formats a clean WhatsApp-ready allocation summary for easy sharing.
+ * Deletes an entry from the tracker.
+ */
+export async function deleteTrackerEntry(id) {
+  const entries = fetchTrackerEntries();
+  const filtered = entries.filter((e) => e.id !== id);
+  writeTrackerEntries(filtered);
+  return filtered;
+}
+
+/**
+ * Clears all vacant entries from the tracker.
+ */
+export async function clearVacantEntries(propertyId = null) {
+  const entries = fetchTrackerEntries();
+  const filtered = entries.filter((e) => {
+    if (propertyId && propertyId !== 'all' && e.propertyId !== propertyId) return true;
+    return e.status !== 'vacant';
+  });
+  writeTrackerEntries(filtered);
+  return filtered;
+}
+
+/**
+ * Removes all empty, incomplete, or corrupted entries from the tracker.
+ */
+export async function removeEmptyEntries() {
+  const entries = fetchTrackerEntries();
+  const valid = entries.filter(isEntryValid);
+  writeTrackerEntries(valid);
+  return valid;
+}
+
+/**
+ * Removes all entries from the tracker completely.
+ */
+export async function clearAllTrackerEntries() {
+  writeTrackerEntries([]);
+  return [];
+}
+
+/**
+ * Computes live occupancy metrics for both locations.
+ */
+export function fetchTrackerStats(entriesList = null) {
+  const source = entriesList || fetchTrackerEntries();
+  const entries = source.filter(isEntryValid);
+
+  const krishnaEntries = entries.filter((e) => e.propertyId === 'krishna-inn');
+  const svpcEntries = entries.filter((e) => e.propertyId === 'svpc');
+
+  const krishnaOccupied = krishnaEntries.filter((e) => e.status === 'occupied').length;
+  const krishnaVacant = krishnaEntries.filter((e) => e.status === 'vacant').length;
+
+  const svpcOccupied = svpcEntries.filter((e) => e.status === 'occupied').length;
+  const svpcVacant = svpcEntries.filter((e) => e.status === 'vacant').length;
+
+  const totalOccupied = krishnaOccupied + svpcOccupied;
+  const totalVacant = krishnaVacant + svpcVacant;
+
+  return {
+    krishna: { occupied: krishnaOccupied, vacant: krishnaVacant, total: krishnaEntries.length },
+    svpc: { occupied: svpcOccupied, vacant: svpcVacant, total: svpcEntries.length },
+    totalOccupied,
+    totalVacant,
+    totalEntries: entries.length,
+  };
+}
+
+/**
+ * Formats a clean WhatsApp-ready allocation summary of the tracker.
  */
 export function generateWhatsAppSummary(propertyId = null) {
-  const bookings = readLocalBookings();
+  const entries = fetchTrackerEntries();
   const targetProperties = propertyId
     ? PROPERTIES.filter((p) => p.id === propertyId)
     : PROPERTIES;
 
   let lines = [
-    '🏨 *BHUVAN & MANASA WEDDING ACCOMMODATION*',
-    '📅 *10 - 13 December 2026*',
-    `🕒 Check-in: ${CHECK_IN_TIME} | 🕚 Check-out: ${CHECK_OUT_TIME}`,
+    '🏨 *BHUVAN & MANASA WEDDING ACCOMMODATION TRACKER*',
+    '📅 *12 December 2026*',
     '----------------------------------------',
   ];
 
   targetProperties.forEach((prop) => {
-    const propBookings = bookings.filter((b) => b.property_id === prop.id);
-    const occupiedCount = prop.rooms.filter((r) =>
-      propBookings.some((b) => String(b.room) === String(r) && b.status === 'active')
-    ).length;
+    const propEntries = entries.filter((e) => e.propertyId === prop.id);
+    const occupied = propEntries.filter((e) => e.status === 'occupied');
 
     lines.push('');
-    lines.push(`📍 *${prop.name.toUpperCase()}* (${occupiedCount}/${prop.rooms.length} Occupied)`);
+    lines.push(`📍 *${prop.name.toUpperCase()}* (${occupied.length} Rooms Occupied)`);
     if (prop.address) lines.push(`_${prop.address}_`);
+    if (prop.timingNote) lines.push(`🕒 ${prop.timingNote}`);
 
-    prop.rooms.forEach((r) => {
-      const b = propBookings.find((item) => String(item.room) === String(r));
-      const isOccupied = b && b.status === 'active';
-      const guest = isOccupied && b.guest_name ? b.guest_name : 'Available';
-      const dates = isOccupied && b.check_in && b.check_out ? ` (${b.check_in.slice(5)} to ${b.check_out.slice(5)})` : '';
-      const icon = isOccupied ? '🔴' : '🟢';
-      lines.push(`${icon} Room ${r}: ${guest}${dates}`);
-    });
+    if (propEntries.length === 0) {
+      lines.push('  _No entries added yet_');
+    } else {
+      propEntries.forEach((item) => {
+        const icon = item.status === 'occupied' ? '🔴' : '🟢';
+        const phone = item.guestPhone ? ` (Ph: ${item.guestPhone})` : '';
+        const guest = item.guestName ? item.guestName : 'Guest';
+        const dates = item.checkIn && item.checkOut ? ` [${item.checkIn.slice(5)} → ${item.checkOut.slice(5)}]` : '';
+        lines.push(`${icon} Room ${item.roomNumber}: ${guest}${phone} - ${item.status.toUpperCase()}${dates}`);
+      });
+    }
   });
 
   lines.push('');
   lines.push('----------------------------------------');
-  lines.push('✨ Updated via Wedding Accommodation Tracker');
+  lines.push('✨ Generated from Wedding Room Allocation Tracker');
 
   return lines.join('\n');
 }
 
-/* --------------------------------------------------------- Compatibility exports */
+/* ------------------------------------------------- Backward Compatibility Wrappers */
 
-export async function createBooking({ propertyId, room, guestName, checkIn, checkOut }) {
-  return saveRoomAllocation({
-    propertyId,
-    room,
-    guestName,
-    status: 'active',
-    checkIn,
-    checkOut,
-  });
+export async function fetchBookings() {
+  return fetchTrackerEntries();
 }
 
-export async function updateBooking({ id, room, guestName, checkIn, checkOut }) {
-  const bookings = readLocalBookings();
-  const existing = bookings.find((b) => b.id === id);
-  if (!existing) throw new Error('Booking not found.');
-
-  return saveRoomAllocation({
-    propertyId: existing.property_id,
-    room,
-    guestName,
-    status: existing.status,
-    checkIn,
-    checkOut,
-  });
+export async function fetchAvailability() {
+  const stats = fetchTrackerStats();
+  return {
+    'krishna-inn': { count: stats.krishna.occupied },
+    svpc: { count: stats.svpc.occupied },
+  };
 }
 
-export async function setBookingStatus(id, status) {
-  const bookings = readLocalBookings();
-  const existing = bookings.find((b) => b.id === id);
-  if (!existing) throw new Error('Booking not found.');
-
-  return saveRoomAllocation({
-    propertyId: existing.property_id,
-    room: existing.room,
-    guestName: existing.guest_name,
-    status,
-    checkIn: existing.check_in,
-    checkOut: existing.check_out,
-  });
+export async function saveRoomAllocation(values) {
+  return saveTrackerEntry(values);
 }
 
-export async function deleteBooking(id) {
-  const token = readSession();
-  if (!token) throw new Error('Host login required.');
-
-  let bookings = readLocalBookings();
-  const existing = bookings.find((b) => b.id === id);
-  if (!existing) throw new Error('Booking not found.');
-
-  return clearRoomAllocation(existing.property_id, existing.room);
-}
-
-export async function unblockRoom(propertyId, room) {
-  return clearRoomAllocation(propertyId, room);
-}
-
-export function roomConflictsWith(propertyId, room, checkIn, checkOut, bookings, ignoreId) {
-  if (!checkIn || !checkOut || checkOut <= checkIn) return false;
-  return (bookings || []).some(
-    (booking) =>
-      booking.property_id === propertyId &&
-      String(booking.room) === String(room) &&
-      booking.status === 'active' &&
-      booking.id !== ignoreId &&
-      booking.check_in < checkOut &&
-      checkIn < booking.check_out
-  );
+export async function clearRoomAllocation(propertyId, room) {
+  const entries = fetchTrackerEntries();
+  const target = entries.find((e) => e.propertyId === propertyId && String(e.roomNumber) === String(room));
+  if (target) {
+    return deleteTrackerEntry(target.id);
+  }
+  return entries;
 }

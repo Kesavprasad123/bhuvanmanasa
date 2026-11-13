@@ -192,7 +192,34 @@ function App({ initialRoute = null }) {
           />
         </Suspense>
       ) : currentRoute === 'accommodation' ? (
-        <Suspense fallback={<div style={{ minHeight: '100vh', background: '#fbf3e9' }} />}>
+        <Suspense
+          fallback={
+            <div
+              className="acc-loading-screen"
+              style={{
+                minHeight: '100vh',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                background: 'linear-gradient(135deg, #fbf1e6, #f5e7dc)',
+                color: '#7d2c40',
+                fontFamily: '"Playfair Display", serif',
+                gap: '12px',
+                padding: '24px',
+                textAlign: 'center',
+              }}
+            >
+              <div style={{ fontSize: '36px' }} aria-hidden="true">🏨</div>
+              <div style={{ fontSize: '18px', letterSpacing: '1.5px', fontWeight: 600 }}>
+                Loading Wedding Accommodation…
+              </div>
+              <div style={{ fontSize: '13.5px', color: '#68594e', fontStyle: 'italic' }}>
+                Bhuvan &amp; Manasa · 12 December 2026
+              </div>
+            </div>
+          }
+        >
           <Accommodation
             musicPlaying={musicPlaying}
             onToggleMusic={toggleMusic}

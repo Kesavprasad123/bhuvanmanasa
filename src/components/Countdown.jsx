@@ -3,7 +3,7 @@ import ScratchCard from './ScratchCard';
 
 const WEDDING_DATE = new Date('2026-12-12T20:26:00+05:30').getTime();
 
-function Countdown() {
+function Countdown({ autoReveal = false }) {
   const [time, setTime] = useState({ days: '00', hours: '00', minutes: '00', seconds: '00' });
   const [stage, setStage] = useState('scratch'); // 'scratch' | 'countdown'
   const [leaving, setLeaving] = useState(false);
@@ -40,7 +40,7 @@ function Countdown() {
   }, []);
 
   return (
-    <section className="countdown-section section-paper">
+    <section id="countdown" className="countdown-section section-paper">
       <div className="section-inner reveal">
         {stage === 'scratch' ? (
           <div className={`scratch-stage${leaving ? ' is-leaving' : ''}`}>
@@ -99,7 +99,7 @@ function Countdown() {
             <h2>Until We Say &ldquo;I Do&rdquo;</h2>
             <p className="scratch-subtitle">Scratch to reveal our special date</p>
 
-            <ScratchCard onRevealed={handleRevealed} />
+            <ScratchCard onRevealed={handleRevealed} autoReveal={autoReveal} />
 
             <p className="scratch-hint">
               Use your finger or mouse to gently scratch the golden layer

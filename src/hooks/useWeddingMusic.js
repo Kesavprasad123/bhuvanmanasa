@@ -1,12 +1,13 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 
 export const SONG_FILES = [
+  'assets/Ubhayakushala.mp3',
   'assets/Raarandoi-veduka-choodham.mp3',
-  'assets/Alanati Ramachandrudu.mp3',
+  'assets/Alanati-Ramachandrudu.mp3',
   'assets/kalyanam-vybhogam.mp3',
   'assets/marriage.mp3',
   'assets/shararat.mp3',
-  'assets/Shatamanam Bhavati.mp3',
+  'assets/Shatamanam-Bhavati.mp3',
   'assets/jaya-mangalam.mp3',
 ];
 
@@ -14,28 +15,51 @@ export const SONG_FILES = [
  * Resolves static asset URL relative to root deployment path.
  * Works on domain root (/), GitHub Pages subpath (/repo/), and local dev server,
  * from both / and /accommodation/ or /gallery/.
+ * Ensures every path component is safely URI-encoded for Android & all browsers.
  */
 export function getRootAssetUrl(relativePath) {
   const cleanRelative = relativePath.replace(/^\/+/, '');
   if (typeof window === 'undefined') return `/${cleanRelative}`;
   const pathname = window.location.pathname || '';
-  const root = pathname.replace(/\/(?:accommodation|gallery)(?:\/.*)?$/i, '');
-  const base = root ? (root.endsWith('/') ? root : `${root}/`) : '/';
-  return `${base}${cleanRelative}`;
+  const root = pathname.replace(/\/(?:accommodation|gallery)(?:\/.*)?$/i, '').replace(/\/index\.html$/i, '').replace(/\/$/, '');
+  const base = root ? `${root}/` : '/';
+  const encodedPath = cleanRelative
+    .split('/')
+    .map((seg) => encodeURIComponent(decodeURIComponent(seg)))
+    .join('/');
+  return `${base}${encodedPath}`;
 }
 
-const getStoredSongIndex = () => {
+export const WEDDING_LAST_SONG_KEY = 'weddingLastSongIndex';
+
+// Module-level cache: ensured to calculate next song ONCE per page refresh
+let pageLoadStartingIndex = null;
+
+export function getNextRefreshSongIndex() {
+  if (pageLoadStartingIndex !== null) {
+    return pageLoadStartingIndex;
+  }
+
   try {
-    const val = localStorage.getItem('weddingSongIndex');
-    if (val !== null) {
-      const parsed = parseInt(val, 10);
-      if (!isNaN(parsed) && parsed >= 0) {
-        return parsed % SONG_FILES.length;
-      }
+    const raw = localStorage.getItem(WEDDING_LAST_SONG_KEY);
+    if (raw === null) {
+      pageLoadStartingIndex = 0;
+      localStorage.setItem(WEDDING_LAST_SONG_KEY, '0');
+      return 0;
     }
-  } catch {}
-  return 0;
-};
+
+    const prev = parseInt(raw, 10);
+    const validPrev = !isNaN(prev) && prev >= 0 ? prev : 0;
+    const next = (validPrev + 1) % SONG_FILES.length;
+
+    pageLoadStartingIndex = next;
+    localStorage.setItem(WEDDING_LAST_SONG_KEY, String(next));
+    return next;
+  } catch {
+    pageLoadStartingIndex = 0;
+    return 0;
+  }
+}
 
 /**
  * Shared wedding background music hook for Main Invitation & Accommodation.
@@ -43,30 +67,16 @@ const getStoredSongIndex = () => {
  * Requirements handled:
  * 1. Immediate playback on site open: User tap starts song without delay.
  * 2. Sequential auto-play: When a song completes, automatically advances to the next song (never repeats).
- * 3. On every refresh: Starts with a different song in rotation.
+ * 3. On every refresh: Guaranteed to start with a different song in rotation.
  * 4. Cross-page continuity: Seamlessly keeps playing when switching to Accommodation and back.
  */
-export function useWeddingMusic({ autoStartIfActive = false, isLandingPage = false } = {}) {
+export function useWeddingMusic({ autoStartIfActive = false } = {}) {
   const [musicPlaying, setMusicPlaying] = useState(false);
   const audioRef = useRef(null);
 
-  // Compute initial numeric song index (never a function)
-  const getInitialIndex = () => {
-    const stored = getStoredSongIndex();
-    if (isLandingPage) {
-      // Rotate to next song on every page reload
-      const nextOnRefresh = (stored + 1) % SONG_FILES.length;
-      try {
-        localStorage.setItem('weddingSongIndex', String(nextOnRefresh));
-      } catch {}
-      return nextOnRefresh;
-    }
-    return stored;
-  };
-
-  const initialIndex = getInitialIndex();
-  const songIndexRef = useRef(initialIndex);
-  const [currentSongIndex, setCurrentSongIndex] = useState(initialIndex);
+  // Initialize with the freshly rotated song for this page load
+  const [currentSongIndex, setCurrentSongIndex] = useState(() => getNextRefreshSongIndex());
+  const songIndexRef = useRef(currentSongIndex);
 
   // Save playback state before unloading
   useEffect(() => {
@@ -113,6 +123,8 @@ export function useWeddingMusic({ autoStartIfActive = false, isLandingPage = fal
     };
   }, []);
 
+  const errorRetriesRef = useRef(0);
+
   const playSongAtIndex = useCallback(async (index, startTime = 0) => {
     const audio = audioRef.current;
     if (!audio) return;
@@ -123,29 +135,57 @@ export function useWeddingMusic({ autoStartIfActive = false, isLandingPage = fal
 
     songIndexRef.current = safeIndex;
     setCurrentSongIndex(safeIndex);
+    pageLoadStartingIndex = safeIndex;
 
     try {
-      localStorage.setItem('weddingSongIndex', String(safeIndex));
-      sessionStorage.setItem('weddingSongIndex', String(safeIndex));
+      localStorage.setItem(WEDDING_LAST_SONG_KEY, String(safeIndex));
       sessionStorage.setItem('weddingMusicActive', 'true');
     } catch {}
 
-    const songUrl = getRootAssetUrl(SONG_FILES[safeIndex]);
-    audio.src = songUrl;
+    const targetFile = SONG_FILES[safeIndex];
+    const songUrl = getRootAssetUrl(targetFile);
+    const currentSrc = audio.getAttribute('src') || audio.src || '';
+    const isSameSrc =
+      currentSrc === songUrl ||
+      currentSrc.endsWith(targetFile) ||
+      currentSrc.endsWith(encodeURI(targetFile));
 
-    if (startTime > 0) {
+    if (!isSameSrc) {
+      audio.src = songUrl;
       try {
-        audio.currentTime = startTime;
+        audio.load();
       } catch {}
     }
 
-    audio.volume = 0.7;
+    // Safely set startTime after metadata is loaded (prevents Android InvalidStateError)
+    if (startTime > 0) {
+      if (audio.readyState >= 1) {
+        try {
+          audio.currentTime = startTime;
+        } catch {}
+      } else {
+        const handleLoadedMetadata = () => {
+          try {
+            audio.currentTime = startTime;
+          } catch {}
+        };
+        audio.addEventListener('loadedmetadata', handleLoadedMetadata, { once: true });
+      }
+    }
 
     try {
-      await audio.play();
+      audio.volume = 0.7;
+    } catch {}
+
+    try {
+      const playPromise = audio.play();
+      if (playPromise !== undefined) {
+        await playPromise;
+      }
       setMusicPlaying(true);
+      errorRetriesRef.current = 0;
     } catch (err) {
-      console.warn('Wedding music play deferred until user interaction:', err.message);
+      console.warn('Wedding music play deferred until user interaction:', err && err.message);
       setMusicPlaying(false);
     }
   }, []);
@@ -157,6 +197,7 @@ export function useWeddingMusic({ autoStartIfActive = false, isLandingPage = fal
   }, [playSongAtIndex]);
 
   const startMusic = useCallback(() => {
+    errorRetriesRef.current = 0;
     const currentIndex = typeof songIndexRef.current === 'number' ? songIndexRef.current : 0;
     playSongAtIndex(currentIndex, 0);
   }, [playSongAtIndex]);
@@ -183,15 +224,20 @@ export function useWeddingMusic({ autoStartIfActive = false, isLandingPage = fal
 
   const resumeMusic = useCallback(() => {
     const audio = audioRef.current;
-    if (audio && audio.src) {
-      audio.play().then(() => {
-        setMusicPlaying(true);
-        try {
-          sessionStorage.setItem('weddingMusicActive', 'true');
-        } catch {}
-      }).catch((err) => {
-        console.warn('Resume music error:', err);
-      });
+    if (audio && (audio.src || audio.getAttribute('src'))) {
+      const playPromise = audio.play();
+      if (playPromise !== undefined) {
+        playPromise
+          .then(() => {
+            setMusicPlaying(true);
+            try {
+              sessionStorage.setItem('weddingMusicActive', 'true');
+            } catch {}
+          })
+          .catch(() => {
+            startMusic();
+          });
+      }
     } else {
       startMusic();
     }
@@ -202,15 +248,20 @@ export function useWeddingMusic({ autoStartIfActive = false, isLandingPage = fal
       stopMusic();
     } else {
       const audio = audioRef.current;
-      if (audio && audio.src && audio.currentTime > 0) {
-        audio.play().then(() => {
-          setMusicPlaying(true);
-          try {
-            sessionStorage.setItem('weddingMusicActive', 'true');
-          } catch {}
-        }).catch(() => {
-          startMusic();
-        });
+      if (audio && (audio.src || audio.getAttribute('src')) && audio.currentTime > 0) {
+        const playPromise = audio.play();
+        if (playPromise !== undefined) {
+          playPromise
+            .then(() => {
+              setMusicPlaying(true);
+              try {
+                sessionStorage.setItem('weddingMusicActive', 'true');
+              } catch {}
+            })
+            .catch(() => {
+              startMusic();
+            });
+        }
       } else {
         startMusic();
       }
@@ -219,34 +270,21 @@ export function useWeddingMusic({ autoStartIfActive = false, isLandingPage = fal
 
   // Handle song completion: automatically play next song in playlist
   const handleSongEnded = useCallback(() => {
+    errorRetriesRef.current = 0;
     playNextSong();
   }, [playNextSong]);
 
-  const handleAudioError = useCallback(() => {
-    // If audio track fails, advance to next track automatically
-    playNextSong();
-  }, [playNextSong]);
-
-  // Attach direct DOM event listeners to guarantee catching ended and error events
-  useEffect(() => {
-    const audio = audioRef.current;
-    if (!audio) return;
-
-    const onEnded = () => {
-      playNextSong();
-    };
-
-    const onError = () => {
-      playNextSong();
-    };
-
-    audio.addEventListener('ended', onEnded);
-    audio.addEventListener('error', onError);
-
-    return () => {
-      audio.removeEventListener('ended', onEnded);
-      audio.removeEventListener('error', onError);
-    };
+  const handleAudioError = useCallback((e) => {
+    console.warn('Audio error encountered:', e);
+    // Prevent rapid infinite error looping on Android
+    if (errorRetriesRef.current < 2) {
+      errorRetriesRef.current += 1;
+      setTimeout(() => {
+        playNextSong();
+      }, 300);
+    } else {
+      setMusicPlaying(false);
+    }
   }, [playNextSong]);
 
   // Auto-start on pages like Accommodation if music was already active in the session

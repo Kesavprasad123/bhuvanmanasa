@@ -222,7 +222,7 @@ function buildBurst() {
   return particles;
 }
 
-function ScratchCard({ onRevealed }) {
+function ScratchCard({ onRevealed, autoReveal = false }) {
   const canvasRef = useRef(null);
   const sizeRef = useRef({ w: 0, h: 0 });
   const dprRef = useRef(1);
@@ -374,6 +374,43 @@ function ScratchCard({ onRevealed }) {
     }
     ctx.restore();
   };
+
+  /* ---------- programmatically auto-reveal with animated stroke ---------- */
+  const triggerAutoReveal = useCallback(() => {
+    if (revealedRef.current) return;
+    setScratching(true);
+
+    const canvas = canvasRef.current;
+    if (canvas && sizeRef.current.w > 0) {
+      const { w } = sizeRef.current;
+      const ratio = brushRatio(w);
+      erase(null, { x: 0.25, y: 0.48 }, ratio);
+      erase({ x: 0.25, y: 0.48 }, { x: 0.5, y: 0.52 }, ratio);
+      erase({ x: 0.5, y: 0.52 }, { x: 0.75, y: 0.46 }, ratio);
+    }
+
+    setTimeout(() => {
+      reveal();
+    }, 250);
+  }, [reveal]);
+
+  useEffect(() => {
+    if (autoReveal && !revealedRef.current) {
+      triggerAutoReveal();
+    }
+  }, [autoReveal, triggerAutoReveal]);
+
+  useEffect(() => {
+    const handleCustomReveal = () => {
+      if (!revealedRef.current) {
+        triggerAutoReveal();
+      }
+    };
+    window.addEventListener('wedding-auto-reveal-scratch', handleCustomReveal);
+    return () => {
+      window.removeEventListener('wedding-auto-reveal-scratch', handleCustomReveal);
+    };
+  }, [triggerAutoReveal]);
 
   const handlePointerDown = (event) => {
     if (revealedRef.current) return;
