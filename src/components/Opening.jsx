@@ -67,7 +67,7 @@ function Opening({ isOpen: siteOpen, onOpen }) {
     }, 1800);
   }, []);
 
-  const handleClick = useCallback(() => {
+  const handleTriggerOpen = useCallback(() => {
     if (envelopeOpen) return;
     setEnvelopeOpen(true);
     createEnvelopeBlast();
@@ -102,7 +102,9 @@ function Opening({ isOpen: siteOpen, onOpen }) {
           id="openEnvelope"
           className={`envelope-button${envelopeOpen ? ' open' : ''}`}
           aria-label="Open wedding invitation"
-          onClick={handleClick}
+          onClick={handleTriggerOpen}
+          onTouchEnd={handleTriggerOpen}
+          style={{ touchAction: 'manipulation' }}
         >
           <div className="letter">
             <div className="letter-border">
@@ -173,7 +175,14 @@ function Opening({ isOpen: siteOpen, onOpen }) {
 
         <h1>You're Invited</h1>
         <br />
-        <p className="tap-hint">Tap the envelope to open our invitation</p>
+        <p
+          className="tap-hint"
+          onClick={handleTriggerOpen}
+          onTouchEnd={handleTriggerOpen}
+          style={{ cursor: 'pointer', touchAction: 'manipulation' }}
+        >
+          Tap the envelope to open our invitation
+        </p>
         <br />
         <br />
       </div>

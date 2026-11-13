@@ -2,11 +2,11 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 
 export const SONG_FILES = [
   'assets/Raarandoi-veduka-choodham.mp3',
-  'assets/Alanati Ramachandrudu.mp3',
+  'assets/Alanati-Ramachandrudu.mp3',
   'assets/kalyanam-vybhogam.mp3',
   'assets/marriage.mp3',
   'assets/shararat.mp3',
-  'assets/Shatamanam Bhavati.mp3',
+  'assets/Shatamanam-Bhavati.mp3',
   'assets/jaya-mangalam.mp3',
 ];
 
@@ -14,14 +14,19 @@ export const SONG_FILES = [
  * Resolves static asset URL relative to root deployment path.
  * Works on domain root (/), GitHub Pages subpath (/repo/), and local dev server,
  * from both / and /accommodation/ or /gallery/.
+ * Ensures every path component is safely URI-encoded for Android & all browsers.
  */
 export function getRootAssetUrl(relativePath) {
   const cleanRelative = relativePath.replace(/^\/+/, '');
   if (typeof window === 'undefined') return `/${cleanRelative}`;
   const pathname = window.location.pathname || '';
-  const root = pathname.replace(/\/(?:accommodation|gallery)(?:\/.*)?$/i, '');
-  const base = root ? (root.endsWith('/') ? root : `${root}/`) : '/';
-  return `${base}${cleanRelative}`;
+  const root = pathname.replace(/\/(?:accommodation|gallery)(?:\/.*)?$/i, '').replace(/\/index\.html$/i, '').replace(/\/$/, '');
+  const base = root ? `${root}/` : '/';
+  const encodedPath = cleanRelative
+    .split('/')
+    .map((seg) => encodeURIComponent(decodeURIComponent(seg)))
+    .join('/');
+  return `${base}${encodedPath}`;
 }
 
 const getStoredSongIndex = () => {
@@ -113,6 +118,8 @@ export function useWeddingMusic({ autoStartIfActive = false, isLandingPage = fal
     };
   }, []);
 
+  const errorRetriesRef = useRef(0);
+
   const playSongAtIndex = useCallback(async (index, startTime = 0) => {
     const audio = audioRef.current;
     if (!audio) return;
@@ -131,21 +138,48 @@ export function useWeddingMusic({ autoStartIfActive = false, isLandingPage = fal
     } catch {}
 
     const songUrl = getRootAssetUrl(SONG_FILES[safeIndex]);
-    audio.src = songUrl;
+    const currentSrc = audio.getAttribute('src') || audio.src || '';
+    const isSameSrc =
+      currentSrc === songUrl ||
+      currentSrc.endsWith(SONG_FILES[safeIndex]) ||
+      currentSrc.endsWith(encodeURI(SONG_FILES[safeIndex]));
 
-    if (startTime > 0) {
+    if (!isSameSrc) {
+      audio.src = songUrl;
       try {
-        audio.currentTime = startTime;
+        audio.load();
       } catch {}
     }
 
-    audio.volume = 0.7;
+    // Safely set startTime after metadata is loaded (prevents Android InvalidStateError)
+    if (startTime > 0) {
+      if (audio.readyState >= 1) {
+        try {
+          audio.currentTime = startTime;
+        } catch {}
+      } else {
+        const handleLoadedMetadata = () => {
+          try {
+            audio.currentTime = startTime;
+          } catch {}
+        };
+        audio.addEventListener('loadedmetadata', handleLoadedMetadata, { once: true });
+      }
+    }
 
     try {
-      await audio.play();
+      audio.volume = 0.7;
+    } catch {}
+
+    try {
+      const playPromise = audio.play();
+      if (playPromise !== undefined) {
+        await playPromise;
+      }
       setMusicPlaying(true);
+      errorRetriesRef.current = 0;
     } catch (err) {
-      console.warn('Wedding music play deferred until user interaction:', err.message);
+      console.warn('Wedding music play deferred until user interaction:', err && err.message);
       setMusicPlaying(false);
     }
   }, []);
@@ -157,6 +191,7 @@ export function useWeddingMusic({ autoStartIfActive = false, isLandingPage = fal
   }, [playSongAtIndex]);
 
   const startMusic = useCallback(() => {
+    errorRetriesRef.current = 0;
     const currentIndex = typeof songIndexRef.current === 'number' ? songIndexRef.current : 0;
     playSongAtIndex(currentIndex, 0);
   }, [playSongAtIndex]);
@@ -183,15 +218,20 @@ export function useWeddingMusic({ autoStartIfActive = false, isLandingPage = fal
 
   const resumeMusic = useCallback(() => {
     const audio = audioRef.current;
-    if (audio && audio.src) {
-      audio.play().then(() => {
-        setMusicPlaying(true);
-        try {
-          sessionStorage.setItem('weddingMusicActive', 'true');
-        } catch {}
-      }).catch((err) => {
-        console.warn('Resume music error:', err);
-      });
+    if (audio && (audio.src || audio.getAttribute('src'))) {
+      const playPromise = audio.play();
+      if (playPromise !== undefined) {
+        playPromise
+          .then(() => {
+            setMusicPlaying(true);
+            try {
+              sessionStorage.setItem('weddingMusicActive', 'true');
+            } catch {}
+          })
+          .catch(() => {
+            startMusic();
+          });
+      }
     } else {
       startMusic();
     }
@@ -202,15 +242,20 @@ export function useWeddingMusic({ autoStartIfActive = false, isLandingPage = fal
       stopMusic();
     } else {
       const audio = audioRef.current;
-      if (audio && audio.src && audio.currentTime > 0) {
-        audio.play().then(() => {
-          setMusicPlaying(true);
-          try {
-            sessionStorage.setItem('weddingMusicActive', 'true');
-          } catch {}
-        }).catch(() => {
-          startMusic();
-        });
+      if (audio && (audio.src || audio.getAttribute('src')) && audio.currentTime > 0) {
+        const playPromise = audio.play();
+        if (playPromise !== undefined) {
+          playPromise
+            .then(() => {
+              setMusicPlaying(true);
+              try {
+                sessionStorage.setItem('weddingMusicActive', 'true');
+              } catch {}
+            })
+            .catch(() => {
+              startMusic();
+            });
+        }
       } else {
         startMusic();
       }
@@ -219,34 +264,21 @@ export function useWeddingMusic({ autoStartIfActive = false, isLandingPage = fal
 
   // Handle song completion: automatically play next song in playlist
   const handleSongEnded = useCallback(() => {
+    errorRetriesRef.current = 0;
     playNextSong();
   }, [playNextSong]);
 
-  const handleAudioError = useCallback(() => {
-    // If audio track fails, advance to next track automatically
-    playNextSong();
-  }, [playNextSong]);
-
-  // Attach direct DOM event listeners to guarantee catching ended and error events
-  useEffect(() => {
-    const audio = audioRef.current;
-    if (!audio) return;
-
-    const onEnded = () => {
-      playNextSong();
-    };
-
-    const onError = () => {
-      playNextSong();
-    };
-
-    audio.addEventListener('ended', onEnded);
-    audio.addEventListener('error', onError);
-
-    return () => {
-      audio.removeEventListener('ended', onEnded);
-      audio.removeEventListener('error', onError);
-    };
+  const handleAudioError = useCallback((e) => {
+    console.warn('Audio error encountered:', e);
+    // Prevent rapid infinite error looping on Android
+    if (errorRetriesRef.current < 2) {
+      errorRetriesRef.current += 1;
+      setTimeout(() => {
+        playNextSong();
+      }, 300);
+    } else {
+      setMusicPlaying(false);
+    }
   }, [playNextSong]);
 
   // Auto-start on pages like Accommodation if music was already active in the session
