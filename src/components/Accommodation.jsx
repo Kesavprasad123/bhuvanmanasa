@@ -2,8 +2,10 @@ import { useCallback, useEffect, useState } from 'react';
 import { PROPERTIES } from '../data/accommodation';
 import {
   bookingConfigured,
+  getActiveRole,
+  isAdminLoggedIn,
   isHostLoggedIn,
-  logoutHost,
+  logoutUser,
   restoreHostSession,
 } from '../data/bookingStore';
 import { HostLoginDialog } from './BookingControls';
@@ -224,9 +226,11 @@ function Accommodation({
     [onBackToInvitation, audioRef]
   );
 
-  // Host session
+  // Host and Admin session
   const [showLogin, setShowLogin] = useState(false);
-  const [hostLoggedIn, setHostLoggedIn] = useState(() => isHostLoggedIn());
+  const [userRole, setUserRole] = useState(() => getActiveRole());
+  const isHost = userRole === 'host' || userRole === 'admin';
+  const isAdmin = userRole === 'admin';
 
   useScrollReveal('accommodation');
 
@@ -252,13 +256,15 @@ function Accommodation({
     };
   }, []);
 
-  // Restore host session
+  // Restore session
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      const token = await restoreHostSession();
-      if (!cancelled && token) {
-        setHostLoggedIn(true);
+      const session = await restoreHostSession();
+      if (!cancelled && session && session.role) {
+        setUserRole(session.role);
+      } else {
+        setUserRole('guest');
       }
     })();
     return () => {
@@ -277,21 +283,21 @@ function Accommodation({
     }
   };
 
-  const handleLoginSuccess = () => {
+  const handleLoginSuccess = (role) => {
     setShowLogin(false);
-    setHostLoggedIn(true);
+    setUserRole(role || getActiveRole());
     setTimeout(() => {
       handleScrollToForm();
     }, 120);
   };
 
   const handleLogout = async () => {
-    await logoutHost();
-    setHostLoggedIn(false);
+    await logoutUser();
+    setUserRole('guest');
   };
 
   const handleSessionExpired = () => {
-    setHostLoggedIn(false);
+    setUserRole('guest');
     setShowLogin(true);
   };
 
@@ -324,14 +330,14 @@ function Accommodation({
             </button>
           )}
 
-          {!hostLoggedIn ? (
+          {!isHost ? (
             <button
               type="button"
               className="acc-host-link"
               onClick={() => setShowLogin(true)}
-              title="Host access to allocate and edit rooms"
+              title="Host and Admin access to allocate and manage rooms"
             >
-              🔒 Host Login
+              🔒 Host / Admin Login
             </button>
           ) : (
             <>
@@ -343,8 +349,8 @@ function Accommodation({
               >
                 ➕ Allocate Room
               </button>
-              <span className="acc-host-mode-pill">
-                👑 Host Mode
+              <span className={`acc-host-mode-pill${isAdmin ? ' is-admin' : ''}`}>
+                {isAdmin ? '🛡️ Admin Mode' : '👑 Host Mode'}
               </span>
               <button
                 type="button"
@@ -437,7 +443,9 @@ function Accommodation({
 
         {/* ROOM ALLOCATION TRACKER */}
         <HostDashboard
-          isHost={hostLoggedIn}
+          role={userRole}
+          isHost={isHost}
+          isAdmin={isAdmin}
           onOpenLogin={() => setShowLogin(true)}
           onLogout={handleLogout}
           onSessionExpired={handleSessionExpired}

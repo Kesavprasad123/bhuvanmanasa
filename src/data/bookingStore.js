@@ -14,25 +14,99 @@ const env = typeof import.meta !== 'undefined' && import.meta.env ? import.meta.
 const SESSION_STORAGE_KEY = 'weddingAccommodationHostSession';
 export const TRACKER_STORAGE_KEY = 'wedding_accommodation_tracker_v5';
 const HOST_PIN_KEY = 'wedding_host_pin_code_v5';
+const ADMIN_PIN_KEY = 'wedding_admin_pin_code_v5';
 const SYNC_CHANNEL_NAME = 'wedding_accommodation_sync_v5';
 
-// Default 4-digit host PIN
+// Default 4-digit passcodes
 const DEFAULT_HOST_PIN = '9229';
+const DEFAULT_ADMIN_PIN = '1968';
 
 export const bookingConfigured = true;
 const WRONG_PIN = 'Incorrect passcode. Please try again.';
 
-/* ---------------------------------------------------------------- Host PIN & Storage */
+/* ---------------------------------------------------------------- Passcode Management */
+
+let memoryHostPin = null;
+let memoryAdminPin = null;
 
 export function getHostPin() {
   try {
-    const custom = localStorage.getItem(HOST_PIN_KEY);
-    if (custom && /^\d{4}$/.test(custom)) return custom;
+    if (typeof localStorage !== 'undefined') {
+      const custom = localStorage.getItem(HOST_PIN_KEY);
+      if (custom && /^\d{4}$/.test(custom)) return custom;
+    } else if (memoryHostPin) {
+      return memoryHostPin;
+    }
   } catch {}
   return String(env.VITE_HOST_PIN || DEFAULT_HOST_PIN);
 }
 
+export function getAdminPin() {
+  try {
+    if (typeof localStorage !== 'undefined') {
+      const custom = localStorage.getItem(ADMIN_PIN_KEY);
+      if (custom && /^\d{4}$/.test(custom)) return custom;
+    } else if (memoryAdminPin) {
+      return memoryAdminPin;
+    }
+  } catch {}
+  return String(env.VITE_ADMIN_PIN || DEFAULT_ADMIN_PIN);
+}
+
+/**
+ * Updates passcodes for Host and/or Admin.
+ * Strictly restricted to Admin authorization (verified by current Admin passcode).
+ */
+export function updatePasscodes({ currentAdminPin, newHostPin, newAdminPin }) {
+  const activeAdminPin = getAdminPin();
+  if (String(currentAdminPin || '').trim() !== activeAdminPin) {
+    throw new Error('Current Admin Passcode is incorrect.');
+  }
+
+  let updatedAny = false;
+
+  if (newHostPin) {
+    const cleanHost = String(newHostPin).trim();
+    if (!/^\d{4}$/.test(cleanHost)) {
+      throw new Error('New Host Passcode must be exactly 4 digits.');
+    }
+    try {
+      memoryHostPin = cleanHost;
+      if (typeof localStorage !== 'undefined') {
+        localStorage.setItem(HOST_PIN_KEY, cleanHost);
+      }
+      updatedAny = true;
+    } catch {
+      throw new Error('Failed to update Host passcode in storage.');
+    }
+  }
+
+  if (newAdminPin) {
+    const cleanAdmin = String(newAdminPin).trim();
+    if (!/^\d{4}$/.test(cleanAdmin)) {
+      throw new Error('New Admin Passcode must be exactly 4 digits.');
+    }
+    try {
+      memoryAdminPin = cleanAdmin;
+      if (typeof localStorage !== 'undefined') {
+        localStorage.setItem(ADMIN_PIN_KEY, cleanAdmin);
+      }
+      updatedAny = true;
+    } catch {
+      throw new Error('Failed to update Admin passcode in storage.');
+    }
+  }
+
+  if (!updatedAny) {
+    throw new Error('Please enter at least one new passcode to update.');
+  }
+
+  broadcastSync();
+  return { success: true };
+}
+
 export function setHostPin(currentPin, newPin) {
+  // Backward compatibility wrapper
   const activePin = getHostPin();
   if (String(currentPin).trim() !== activePin) {
     throw new Error('Current PIN is incorrect.');
@@ -91,6 +165,7 @@ function cleanOldStorage() {
       localStorage.removeItem(TRACKER_STORAGE_KEY);
       localStorage.setItem(MIGRATION_KEY, '1');
       localStorage.setItem(HOST_PIN_KEY, DEFAULT_HOST_PIN);
+      localStorage.setItem(ADMIN_PIN_KEY, DEFAULT_ADMIN_PIN);
     }
 
     // Always wipe persistent session tokens so refreshing the page automatically logs out
@@ -192,6 +267,7 @@ export function subscribeToDatabaseChanges(callback) {
     if (
       event.key === TRACKER_STORAGE_KEY ||
       event.key === HOST_PIN_KEY ||
+      event.key === ADMIN_PIN_KEY ||
       event.key === SESSION_STORAGE_KEY
     ) {
       callback();
@@ -213,16 +289,60 @@ export function subscribeToDatabaseChanges(callback) {
 
 /* ---------------------------------------------------------------- Session Management */
 
-// In-memory host session token (does NOT persist across page refreshes)
-let activeHostSessionToken = '';
+// In-memory session state (strictly resets to 'guest' on page refresh)
+let activeSessionRole = 'guest'; // 'guest' | 'host' | 'admin'
+let activeSessionToken = '';
 
-function readSession() {
-  return activeHostSessionToken;
+export function getActiveRole() {
+  return activeSessionRole;
 }
 
-function writeSession(token) {
-  activeHostSessionToken = token ? String(token) : '';
+export function isHostLoggedIn() {
+  return activeSessionRole === 'host' || activeSessionRole === 'admin';
+}
+
+export function isAdminLoggedIn() {
+  return activeSessionRole === 'admin';
+}
+
+export async function loginUser(pin) {
+  const value = String(pin || '').trim();
+  if (!/^\d{4}$/.test(value)) {
+    throw new Error('Please enter the 4-digit passcode.');
+  }
+
+  const currentAdminPin = getAdminPin();
+  const currentHostPin = getHostPin();
+
+  if (value === currentAdminPin) {
+    activeSessionRole = 'admin';
+    activeSessionToken = 'admin_session_' + Math.random().toString(36).slice(2) + Date.now().toString(36);
+  } else if (value === currentHostPin) {
+    activeSessionRole = 'host';
+    activeSessionToken = 'host_session_' + Math.random().toString(36).slice(2) + Date.now().toString(36);
+  } else {
+    throw new Error(WRONG_PIN);
+  }
+
   // Force wipe persistent storage to guarantee page refresh always logs out
+  try {
+    if (typeof localStorage !== 'undefined') localStorage.removeItem(SESSION_STORAGE_KEY);
+    if (typeof sessionStorage !== 'undefined') sessionStorage.removeItem(SESSION_STORAGE_KEY);
+  } catch {
+    // ignore
+  }
+
+  return { role: activeSessionRole, token: activeSessionToken };
+}
+
+export async function loginHost(pin) {
+  const res = await loginUser(pin);
+  return res.token;
+}
+
+export async function logoutUser() {
+  activeSessionRole = 'guest';
+  activeSessionToken = '';
   try {
     if (typeof localStorage !== 'undefined') localStorage.removeItem(SESSION_STORAGE_KEY);
     if (typeof sessionStorage !== 'undefined') sessionStorage.removeItem(SESSION_STORAGE_KEY);
@@ -231,33 +351,13 @@ function writeSession(token) {
   }
 }
 
-export function isHostLoggedIn() {
-  return Boolean(readSession());
-}
-
-export async function loginHost(pin) {
-  const value = String(pin || '').trim();
-  if (!/^\d{4}$/.test(value)) {
-    throw new Error('Please enter the 4-digit passcode.');
-  }
-
-  const currentPin = getHostPin();
-  if (value !== currentPin) {
-    throw new Error(WRONG_PIN);
-  }
-
-  const token = 'host_session_' + Math.random().toString(36).slice(2) + Date.now().toString(36);
-  writeSession(token);
-  return token;
-}
-
 export async function logoutHost() {
-  writeSession('');
+  return logoutUser();
 }
 
 export async function restoreHostSession() {
   // Resets to empty/logged-out on refresh
-  return activeHostSessionToken;
+  return activeSessionRole !== 'guest' ? { role: activeSessionRole, token: activeSessionToken } : null;
 }
 
 export function isSessionExpired(error) {

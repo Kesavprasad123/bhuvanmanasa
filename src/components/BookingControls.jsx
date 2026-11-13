@@ -1,8 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
 import { CHECK_IN_TIME, CHECK_OUT_TIME } from '../data/accommodation';
 import {
+  getAdminPin,
+  getHostPin,
   loginHost,
+  loginUser,
   setHostPin,
+  updatePasscodes,
 } from '../data/bookingStore';
 
 /**
@@ -84,11 +88,11 @@ export function HostLoginDialog({ open, onClose, onSuccess }) {
     setBusy(true);
     setError('');
     try {
-      await loginHost(pinValue);
+      const { role } = await loginUser(pinValue);
       setPin('');
-      onSuccessRef.current();
+      onSuccessRef.current(role);
     } catch (err) {
-      setError((err && err.message) || 'Invalid 4-digit PIN. Please try again.');
+      setError((err && err.message) || 'Invalid 4-digit passcode. Please try again.');
     } finally {
       setBusy(false);
     }
@@ -133,11 +137,11 @@ export function HostLoginDialog({ open, onClose, onSuccess }) {
         aria-describedby="acc-login-desc"
       >
         <span className="acc-modal-ornament" aria-hidden="true">
-          👑
+          🛡️
         </span>
-        <h2 id="acc-login-title">Host Login</h2>
+        <h2 id="acc-login-title">Host &amp; Admin Login</h2>
         <p id="acc-login-desc" className="acc-modal-copy">
-          Enter your 4-digit secret PIN to access the dynamic room allocation tracker.
+          Enter your 4-digit secret passcode to unlock the room allocation tracker.
         </p>
 
         <form className="acc-modal-form" onSubmit={handleSubmit}>
@@ -239,7 +243,7 @@ export function HostLoginDialog({ open, onClose, onSuccess }) {
         </form>
 
         <p className="acc-modal-note">
-          Confidential access for the wedding host only. Guest details are strictly protected.
+          Confidential access for the wedding host and administrators. Guest details are strictly protected.
         </p>
       </div>
     </div>
@@ -346,6 +350,136 @@ export function ChangePinDialog({ open, onClose, onSuccess }) {
           <div className="acc-modal-actions">
             <button className="gold-button" type="submit" disabled={busy || newPin.length !== 4}>
               {busy ? 'Updating…' : 'Save New PIN'}
+            </button>
+            <button className="acc-ghost-button" type="button" onClick={onClose} disabled={busy}>
+              Cancel
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Admin Passcode Management Dialog:
+ * Strictly accessible only by Admin to modify passcodes for both Host and Admin.
+ */
+export function AdminPasscodeDialog({ open, onClose, onSuccess }) {
+  const [currentAdminPin, setCurrentAdminPin] = useState('');
+  const [newHostPin, setNewHostPin] = useState('');
+  const [newAdminPin, setNewAdminPin] = useState('');
+  const [error, setError] = useState('');
+  const [busy, setBusy] = useState(false);
+
+  useModal(open, onClose);
+
+  useEffect(() => {
+    if (!open) {
+      setCurrentAdminPin('');
+      setNewHostPin('');
+      setNewAdminPin('');
+      setError('');
+      setBusy(false);
+    }
+  }, [open]);
+
+  if (!open) return null;
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (!currentAdminPin || currentAdminPin.length !== 4) {
+      setError('Please enter the current 4-digit Admin Passcode.');
+      return;
+    }
+    if (newHostPin && newHostPin.length !== 4) {
+      setError('New Host Passcode must be exactly 4 digits.');
+      return;
+    }
+    if (newAdminPin && newAdminPin.length !== 4) {
+      setError('New Admin Passcode must be exactly 4 digits.');
+      return;
+    }
+    if (!newHostPin && !newAdminPin) {
+      setError('Please enter a new Host or Admin passcode to update.');
+      return;
+    }
+
+    setBusy(true);
+    try {
+      updatePasscodes({
+        currentAdminPin,
+        newHostPin: newHostPin || null,
+        newAdminPin: newAdminPin || null,
+      });
+      if (onSuccess) onSuccess();
+      onClose();
+    } catch (err) {
+      setError((err && err.message) || 'Failed to update passcodes.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="acc-modal-backdrop" role="presentation">
+      <div className="acc-modal" role="dialog" aria-modal="true" aria-labelledby="acc-admin-pin-title">
+        <span className="acc-modal-ornament" aria-hidden="true">🔑</span>
+        <h2 id="acc-admin-pin-title">Manage Passcodes</h2>
+        <p className="acc-modal-copy">
+          Administrator controls: Update the 4-digit passcodes for Host and Admin accounts.
+        </p>
+
+        <form onSubmit={handleSubmit} className="acc-modal-form">
+          <div className="acc-field">
+            <label htmlFor="ap-curr">Current Admin Passcode : <span className="acc-required">*</span></label>
+            <input
+              id="ap-curr"
+              type="password"
+              inputMode="numeric"
+              maxLength={4}
+              placeholder="Enter Current Admin Passcode"
+              value={currentAdminPin}
+              onChange={(e) => setCurrentAdminPin(e.target.value.replace(/\D/g, '').slice(0, 4))}
+              required
+            />
+          </div>
+
+          <div className="acc-field">
+            <label htmlFor="ap-host">New Host Passcode : <small>(Leave blank to keep current)</small></label>
+            <input
+              id="ap-host"
+              type="password"
+              inputMode="numeric"
+              maxLength={4}
+              placeholder="New 4-digit Host Passcode"
+              value={newHostPin}
+              onChange={(e) => setNewHostPin(e.target.value.replace(/\D/g, '').slice(0, 4))}
+            />
+          </div>
+
+          <div className="acc-field">
+            <label htmlFor="ap-admin">New Admin Passcode : <small>(Leave blank to keep current)</small></label>
+            <input
+              id="ap-admin"
+              type="password"
+              inputMode="numeric"
+              maxLength={4}
+              placeholder="New 4-digit Admin Passcode"
+              value={newAdminPin}
+              onChange={(e) => setNewAdminPin(e.target.value.replace(/\D/g, '').slice(0, 4))}
+            />
+          </div>
+
+          {error && <p className="acc-error" role="alert">⚠️ {error}</p>}
+
+          <div className="acc-modal-actions">
+            <button
+              className="gold-button"
+              type="submit"
+              disabled={busy || currentAdminPin.length !== 4 || (!newHostPin && !newAdminPin)}
+            >
+              {busy ? 'Saving…' : 'Save Passcodes'}
             </button>
             <button className="acc-ghost-button" type="button" onClick={onClose} disabled={busy}>
               Cancel

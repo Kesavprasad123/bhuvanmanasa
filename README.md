@@ -80,14 +80,15 @@ The website features an immersive, mobile-optimized wedding background soundtrac
 1. **Krishna Inn** (Danavaipeta — flexible timings on 12 Dec 2026)
 2. **SVPC Convention Hall 1** (Wedding Hall — 12 Dec 9:00 AM to 13 Dec 7:00 AM)
 
-* **Host Security & Privacy**:
-  - Host edit access is protected by a 4-digit host passcode.
-  - **In-Memory Session Security**: Host login is held in runtime memory only. **Refreshing the page automatically logs out the host**, ensuring that guests or shared devices are returned to read-only Guest view.
+* **Dual-Role Access Control (Host & Admin)**:
+  - **Host Mode**: Protected by a 4-digit host passcode. Hosts can add guest entries, edit contact/room details, and mark rooms as Vacant. When a room is marked Vacant, it is immediately archived and hidden from both Host and Guest views. Hosts cannot delete records or alter passcodes.
+  - **Admin Mode**: Protected by a confidential 4-digit administrator passcode. Administrators have full visibility into all records (both occupied and vacated history), exclusive permission to delete entries, and exclusive controls to update passcodes for both Host and Admin accounts.
+  - **In-Memory Session Security**: Sessions are held in runtime memory only. **Refreshing the page automatically logs out both Host and Admin**, instantly returning devices to the read-only Guest view.
 * **Tracker Controls & Validation**:
   - Requires Room Number and Guest Name for all entries.
-  - Blank/empty submissions are blocked, and corrupted or empty entries are automatically purged from local storage on load.
-  - Host controls include 1-click status toggling (Occupied ↔ Vacant), quick phone calling/WhatsApp messaging, "Clear All Vacant", and "Remove Empty Entries".
-  - Guests have a clean, read-only view of allocated rooms; vacant rooms and edit tools are strictly hidden from guests.
+  - Blank/empty submissions are blocked, and corrupted entries are automatically purged on load.
+  - Includes quick phone calling and 1-tap WhatsApp summary generation.
+  - Guests have a clean, read-only view of active allocated rooms; vacated rooms and administrative controls are strictly hidden.
 ## ⚡ Global Performance Standards & AI Guidelines
 
 This project enforces strict global standards for load speed and mobile responsiveness.

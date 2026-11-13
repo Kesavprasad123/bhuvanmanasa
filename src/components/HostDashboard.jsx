@@ -14,7 +14,7 @@ import {
   subscribeToDatabaseChanges,
   toggleEntryStatus,
 } from '../data/bookingStore.js';
-import { ChangePinDialog, ConfirmDialog } from './BookingControls.jsx';
+import { AdminPasscodeDialog, ConfirmDialog } from './BookingControls.jsx';
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
@@ -28,7 +28,9 @@ function formatDateShort(iso) {
 }
 
 export default function HostDashboard({
+  role = 'guest',
   isHost = false,
+  isAdmin = false,
   onOpenLogin,
   onExit,
   onLogout,
@@ -52,7 +54,7 @@ export default function HostDashboard({
   const [submitting, setSubmitting] = useState(false);
 
   // Dialog states
-  const [showChangePin, setShowChangePin] = useState(false);
+  const [showAdminPasscodeDialog, setShowAdminPasscodeDialog] = useState(false);
   const [deleteConfirmId, setDeleteConfirmId] = useState(null);
 
   const handleFocusCreateEntry = () => {
@@ -112,8 +114,8 @@ export default function HostDashboard({
         return false;
       }
 
-      // Guests only see allocated / occupied rooms — vacant rooms are strictly hidden from guests
-      if (!isHost && item.status !== 'occupied') {
+      // Vacant entries are strictly hidden from both Host and Guests. Only Admin can view all entries (including vacant)!
+      if (!isAdmin && item.status !== 'occupied') {
         return false;
       }
 
@@ -122,8 +124,8 @@ export default function HostDashboard({
         return false;
       }
 
-      // Status filter (for Host only)
-      if (isHost) {
+      // Status filter (for Admin only)
+      if (isAdmin) {
         if (statusFilter === 'occupied' && item.status !== 'occupied') return false;
         if (statusFilter === 'vacant' && item.status !== 'vacant') return false;
       }
@@ -137,7 +139,7 @@ export default function HostDashboard({
       }
       return true;
     });
-  }, [entries, activePropertyId, statusFilter, searchQuery, isHost]);
+  }, [entries, activePropertyId, statusFilter, searchQuery, isHost, isAdmin]);
 
   // Reset form
   const resetForm = () => {
@@ -212,11 +214,15 @@ export default function HostDashboard({
       });
 
       loadEntries();
-      showToast(
-        targetStatus === 'occupied'
-          ? `✓ Room ${cleanRoom} allocated to ${cleanGuest}!`
-          : `✓ Room ${cleanRoom} marked as Vacant.`
-      );
+      if (targetStatus === 'occupied') {
+        showToast(`✓ Room ${cleanRoom} allocated to ${cleanGuest}!`);
+      } else {
+        showToast(
+          !isAdmin
+            ? `✓ Room ${cleanRoom} marked as Vacant (archived for Admin).`
+            : `✓ Room ${cleanRoom} marked as Vacant.`
+        );
+      }
       resetForm();
     } catch (err) {
       setFormError((err && err.message) || 'Failed to save room entry.');
@@ -232,15 +238,22 @@ export default function HostDashboard({
       await toggleEntryStatus(id);
       loadEntries();
       const next = currentStatus === 'occupied' ? 'Vacant' : 'Occupied';
-      showToast(`Room ${room} is now marked ${next}.`);
+      if (!isAdmin && next === 'Vacant') {
+        showToast(`✓ Room ${room} marked as Vacant and archived for Admin.`);
+      } else {
+        showToast(`Room ${room} is now marked ${next}.`);
+      }
     } catch (err) {
       showToast('Could not update status: ' + err.message);
     }
   };
 
-  // Delete Entry
+  // Delete Entry (Admin Only)
   const handleDeleteEntry = async (id) => {
-    if (!isHost) return;
+    if (!isAdmin) {
+      showToast('⚠️ Only Admin has permission to delete entries.');
+      return;
+    }
     try {
       await deleteTrackerEntry(id);
       loadEntries();
@@ -250,9 +263,9 @@ export default function HostDashboard({
     }
   };
 
-  // Clear all vacant entries
+  // Clear all vacant entries (Admin Only)
   const handleClearAllVacant = async () => {
-    if (!isHost) return;
+    if (!isAdmin) return;
     const count = stats.totalVacant;
     if (count === 0) return;
     if (
@@ -271,9 +284,9 @@ export default function HostDashboard({
     }
   };
 
-  // Explicitly remove any empty or incomplete entries
+  // Explicitly remove any empty or incomplete entries (Admin Only)
   const handleRemoveEmptyEntries = async () => {
-    if (!isHost) return;
+    if (!isAdmin) return;
     try {
       await removeEmptyEntries();
       loadEntries();
@@ -283,9 +296,9 @@ export default function HostDashboard({
     }
   };
 
-  // Clear all tracker entries (Host full reset)
+  // Clear all tracker entries (Admin Only)
   const handleClearAllEntries = async () => {
-    if (!isHost) return;
+    if (!isAdmin) return;
     if (entries.length === 0) return;
     if (
       !window.confirm(
@@ -338,16 +351,20 @@ export default function HostDashboard({
       <div className="acc-dash-head">
         <div className="acc-dash-title-block">
           <div className="acc-host-badge-row">
-            {isHost && (
+            {isAdmin ? (
+              <span className="acc-host-badge is-admin">🛡️ ADMIN MODE</span>
+            ) : isHost ? (
               <span className="acc-host-badge">👑 HOST MODE</span>
-            )}
+            ) : null}
             <span className="acc-live-pulse-badge">● Live Updates</span>
           </div>
           <h2 id="acc-dash-title">Room Allocation Tracker</h2>
           <p className="acc-dash-sub">
-            {isHost
-              ? 'Manage room assignments, guest contact details, and check-in status.'
-              : 'View allocated rooms and guest stays across Krishna IN and SVPC Convention Hall 1.'}
+            {isAdmin
+              ? 'Full Administrator controls: manage occupied & vacated rooms, delete records, and update passcodes.'
+              : isHost
+                ? 'Host controls: allocate rooms and mark checkout status (vacated entries are archived).'
+                : 'View allocated rooms and guest stays across Krishna IN and SVPC Convention Hall 1.'}
           </p>
         </div>
 
@@ -370,14 +387,16 @@ export default function HostDashboard({
               >
                 📋 Copy WhatsApp Summary
               </button>
-              <button
-                type="button"
-                className="acc-ghost-button"
-                onClick={() => setShowChangePin(true)}
-                title="Change your secret 4-digit PIN code"
-              >
-                🔑 PIN Code
-              </button>
+              {isAdmin && (
+                <button
+                  type="button"
+                  className="acc-ghost-button"
+                  onClick={() => setShowAdminPasscodeDialog(true)}
+                  title="Update passcodes for Host and Admin"
+                >
+                  🔑 Passcodes
+                </button>
+              )}
               {onExit && (
                 <button type="button" className="acc-ghost-button" onClick={onExit}>
                   👁️ Guest View
@@ -639,8 +658,8 @@ export default function HostDashboard({
             </p>
           </div>
 
-          {/* Filter Pills - Host Only (vacant controls strictly for Host) */}
-          {isHost && (
+          {/* Filter Pills - Admin has full status tabs; Host views active occupied rooms */}
+          {isAdmin ? (
             <div className="acc-filter-pills" role="group" aria-label="Filter status">
               <button
                 type="button"
@@ -692,7 +711,13 @@ export default function HostDashboard({
                 🧹 Remove Empty Entries
               </button>
             </div>
-          )}
+          ) : isHost ? (
+            <div className="acc-filter-pills" role="group" aria-label="Filter status">
+              <span className="acc-filter-pill is-occupied is-active">
+                🔴 Active Occupied ({filteredEntries.length})
+              </span>
+            </div>
+          ) : null}
         </div>
 
         {/* Search Bar */}
@@ -823,7 +848,7 @@ export default function HostDashboard({
                     </div>
                   </div>
 
-                  {/* Actions for Host Only */}
+                  {/* Actions for Host & Admin */}
                   {isHost && (
                     <div className="acc-card-actions">
                       <button
@@ -844,14 +869,17 @@ export default function HostDashboard({
                         ✏️ Edit
                       </button>
 
-                      <button
-                        type="button"
-                        className="acc-card-btn is-delete"
-                        onClick={() => setDeleteConfirmId(entry.id)}
-                        title="Remove entry"
-                      >
-                        🗑️
-                      </button>
+                      {/* Delete is STRICTLY Admin Only */}
+                      {isAdmin && (
+                        <button
+                          type="button"
+                          className="acc-card-btn is-delete"
+                          onClick={() => setDeleteConfirmId(entry.id)}
+                          title="Remove entry (Admin Only)"
+                        >
+                          🗑️
+                        </button>
+                      )}
                     </div>
                   )}
                 </div>
@@ -861,12 +889,14 @@ export default function HostDashboard({
         )}
       </div>
 
-      {/* Change Host PIN Dialog */}
-      <ChangePinDialog
-        open={showChangePin}
-        onClose={() => setShowChangePin(false)}
-        onSuccess={() => showToast('🔑 Host PIN updated successfully!')}
-      />
+      {/* Admin Passcode Management Dialog */}
+      {isAdmin && (
+        <AdminPasscodeDialog
+          open={showAdminPasscodeDialog}
+          onClose={() => setShowAdminPasscodeDialog(false)}
+          onSuccess={() => showToast('🔑 Passcodes updated successfully!')}
+        />
+      )}
 
       {/* Confirm Delete Dialog */}
       {deleteConfirmId && (
