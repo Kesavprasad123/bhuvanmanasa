@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 
 export const SONG_FILES = [
+  'assets/Ubhayakushala.mp3',
   'assets/Raarandoi-veduka-choodham.mp3',
   'assets/Alanati-Ramachandrudu.mp3',
   'assets/kalyanam-vybhogam.mp3',
@@ -137,12 +138,21 @@ export function useWeddingMusic({ autoStartIfActive = false, isLandingPage = fal
       sessionStorage.setItem('weddingMusicActive', 'true');
     } catch {}
 
-    const songUrl = getRootAssetUrl(SONG_FILES[safeIndex]);
+    let targetFile = SONG_FILES[safeIndex];
+    if (
+      targetFile === 'assets/Ubhayakushala.mp3' &&
+      typeof audio.canPlayType === 'function' &&
+      audio.canPlayType('audio/mp4')
+    ) {
+      targetFile = 'assets/Ubhayakushala.m4a';
+    }
+
+    const songUrl = getRootAssetUrl(targetFile);
     const currentSrc = audio.getAttribute('src') || audio.src || '';
     const isSameSrc =
       currentSrc === songUrl ||
-      currentSrc.endsWith(SONG_FILES[safeIndex]) ||
-      currentSrc.endsWith(encodeURI(SONG_FILES[safeIndex]));
+      currentSrc.endsWith(targetFile) ||
+      currentSrc.endsWith(encodeURI(targetFile));
 
     if (!isSameSrc) {
       audio.src = songUrl;
