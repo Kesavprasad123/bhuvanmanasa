@@ -4173,13 +4173,14 @@
     color: var(--gold);
   }
 
-  /* ---- 4-Reels Showcase Container ---- */
+  /* ---- 6-Reels Showcase Container ---- */
   .hvs-reels-showcase {
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(3, 1fr);
     gap: clamp(16px, 2vw, 24px);
     margin: 0 auto;
     align-items: stretch;
+    max-width: 1040px;
   }
 
   /* ---- Reel Card ---- */

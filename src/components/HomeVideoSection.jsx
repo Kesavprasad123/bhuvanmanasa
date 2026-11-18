@@ -16,6 +16,26 @@ const REEL_VIDEOS = [
     icon: '👑',
   },
   {
+    id: 'bride-pellikuthuru',
+    src: asset('videos/Manasa_Pellikuthuru_Corrected_HD.mp4'),
+    poster: asset('assets/pellikuthuru.webp'),
+    title: "The Bride's Sacred Glow",
+    teluguTitle: 'పెళ్ళికూతురు మంగళ వేడుక',
+    subtitle: 'The divine, radiant moments of Manasa as bride',
+    badge: 'Bride Ceremony',
+    icon: '🌸',
+  },
+  {
+    id: 'save-the-date',
+    src: asset('videos/Bhuvan_Manasa_Save_The_Date_Eyes_Corrected_HD.mp4'),
+    poster: asset('assets/feature-img.webp'),
+    title: 'Save The Date & Sacred Union',
+    teluguTitle: 'సేవ్ ది డేట్ · శుభ ముహూర్తం',
+    subtitle: 'A beautiful glimpse into our romantic journey & celebrations',
+    badge: 'Save The Date',
+    icon: '💍',
+  },
+  {
     id: 'cinema-invitation',
     src: asset('videos/Bhuvan_Manasa_Cinema_Invitation_Clean_Full_HD.mp4'),
     poster: asset('assets/weddding1.webp'),
@@ -474,7 +494,7 @@ function HomeVideoSection({ onNavigateToGallery, onPauseMusic, onResumeMusic }) 
           </svg>
         </div>
 
-        {/* 4-Reels Showcase Container */}
+        {/* 6-Reels Showcase Container */}
         <div
           ref={showcaseRef}
           className="hvs-reels-showcase reveal"

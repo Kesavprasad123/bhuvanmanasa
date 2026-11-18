@@ -7,6 +7,40 @@ const BASE = import.meta.env.BASE_URL || './';
 const cleanBase = BASE.endsWith('/') ? BASE : `${BASE}/`;
 const asset = (p) => `${cleanBase}${p.replace(/^\/+/, '')}`;
 
+export function parseYouTubeVideoId(input) {
+  if (!input || typeof input !== 'string') return null;
+  const trimmed = input.trim();
+  if (!trimmed) return null;
+
+  // Direct 11-character video ID
+  if (/^[a-zA-Z0-9_-]{11}$/.test(trimmed)) {
+    return trimmed;
+  }
+
+  try {
+    const url = new URL(trimmed);
+    if (url.searchParams.has('v')) {
+      return url.searchParams.get('v');
+    }
+    if (url.hostname === 'youtu.be') {
+      const id = url.pathname.replace(/^\//, '').split('/')[0];
+      if (id) return id;
+    }
+    const pathParts = url.pathname.split('/').filter(Boolean);
+    const liveIdx = pathParts.findIndex((part) => ['live', 'embed', 'v', 'shorts'].includes(part));
+    if (liveIdx !== -1 && pathParts[liveIdx + 1]) {
+      return pathParts[liveIdx + 1].split('?')[0];
+    }
+  } catch {
+    const match = trimmed.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=|live\/|shorts\/))([\w-]{11})/);
+    if (match && match[1]) {
+      return match[1];
+    }
+  }
+
+  return null;
+}
+
 export const WEDDING_VIDEOS = [
   {
     id: 'groom-first',
@@ -16,6 +50,28 @@ export const WEDDING_VIDEOS = [
     src: asset('videos/Bhuvan_Manasa_Groom_First_Full_HD.mp4'),
     poster: asset('assets/pellikoduku.webp'),
     badge: 'Groom First Look',
+    category: 'videos',
+    duration: 'Full HD',
+  },
+  {
+    id: 'bride-pellikuthuru',
+    title: 'The Bride\'s Sacred Glow',
+    teluguTitle: 'పెళ్ళికూతురు మంగళ వేడుక',
+    subtitle: 'The divine, radiant moments of Manasa as bride surrounded by love and family affection.',
+    src: asset('videos/Manasa_Pellikuthuru_Corrected_HD.mp4'),
+    poster: asset('assets/pellikuthuru.webp'),
+    badge: 'Bride Ceremony',
+    category: 'videos',
+    duration: 'Full HD',
+  },
+  {
+    id: 'save-the-date',
+    title: 'Save The Date & Sacred Union',
+    teluguTitle: 'సేవ్ ది డేట్ · శుభ ముహూర్తం',
+    subtitle: 'A romantic glimpse into Bhuvan & Manasa’s journey of love and sacred celebrations.',
+    src: asset('videos/Bhuvan_Manasa_Save_The_Date_Eyes_Corrected_HD.mp4'),
+    poster: asset('assets/feature-img.webp'),
+    badge: 'Save The Date',
     category: 'videos',
     duration: 'Full HD',
   },
@@ -268,7 +324,8 @@ export const GALLERY_ITEMS = [
 
 const CATEGORIES = [
   { id: 'all', label: 'All Celebrations', icon: '✨' },
-  { id: 'videos', label: 'Videos', icon: '🎥' },
+  { id: 'live', label: 'YouTube Live', icon: '🔴' },
+  { id: 'videos', label: 'Reels & Videos', icon: '🎥' },
   { id: 'pellikoduku', label: 'Pelli Koduku', icon: '🌸' },
   { id: 'pellikuthuru', label: 'Pelli Kuturu', icon: '🌺' },
   { id: 'ceremonies', label: 'Ceremonies', icon: '💍' },
@@ -289,22 +346,45 @@ function GalleryPage({
   const [playingVideoId, setPlayingVideoId] = useState(null);
   const videoRefs = useRef({});
 
+  const youtubeLiveConfig = (
+    import.meta.env.VITE_YOUTUBE_LIVE_URL ||
+    import.meta.env.VITE_YOUTUBE_LIVE_ID ||
+    ''
+  ).trim();
+  const liveVideoId = parseYouTubeVideoId(youtubeLiveConfig);
+
   useScrollReveal(activeCategory);
 
   useEffect(() => {
     window.scrollTo(0, 0);
     const prevTitle = document.title;
     document.title = 'Wedding Gallery & Videos | Bhuvan & Manasa';
+
+    // Support deep-linking to #live or #youtube-live or #videos
+    if (typeof window !== 'undefined' && window.location.hash) {
+      const hash = window.location.hash.toLowerCase();
+      if (hash.includes('live')) {
+        setActiveCategory('live');
+        setTimeout(() => {
+          const el = document.getElementById('youtube-live');
+          if (el) el.scrollIntoView({ behavior: 'smooth' });
+        }, 300);
+      } else if (hash.includes('video')) {
+        setActiveCategory('videos');
+      }
+    }
+
     return () => {
       document.title = prevTitle;
     };
   }, []);
 
   // Filter items
+  const showLive = activeCategory === 'all' || activeCategory === 'live';
   const showVideos = activeCategory === 'all' || activeCategory === 'videos';
   const filteredPhotos = useMemo(() => {
     if (activeCategory === 'all') return GALLERY_ITEMS;
-    if (activeCategory === 'videos') return [];
+    if (activeCategory === 'videos' || activeCategory === 'live') return [];
     return GALLERY_ITEMS.filter((item) => item.category === activeCategory);
   }, [activeCategory]);
 
@@ -464,6 +544,104 @@ function GalleryPage({
             ))}
           </div>
         </div>
+
+        {/* YOUTUBE LIVE SECTION */}
+        {showLive && (
+          <section id="youtube-live" className="gallery-live-section reveal">
+            <div className="section-title-wrap">
+              <span className="section-eyebrow live-eyebrow">
+                <span className="live-dot-pulse" aria-hidden="true" />
+                OFFICIAL LIVE STREAM · ప్రత్యక్ష ప్రసారం
+              </span>
+              <h2>Wedding Ceremony Live Broadcast</h2>
+              <p className="gallery-live-sub">
+                Watch the sacred Muhurtham ceremonies live from SVPC Conventions, Rajamahendravaram.
+              </p>
+            </div>
+
+            <div className="gallery-live-card">
+              {liveVideoId ? (
+                <>
+                  <div className="gallery-live-player-wrap">
+                    <iframe
+                      src={`https://www.youtube-nocookie.com/embed/${liveVideoId}?autoplay=0&rel=0&modestbranding=1&enablejsapi=1`}
+                      title="Bhuvan & Manasa Wedding Live Stream · ప్రత్యక్ష ప్రసారం"
+                      className="gallery-live-iframe"
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                      allowFullScreen
+                      loading="lazy"
+                    />
+                  </div>
+                  <div className="gallery-live-card-meta">
+                    <div className="gallery-live-badge-row">
+                      <span className="live-active-tag">
+                        <span className="live-dot-blink" />
+                        LIVE STREAM ACTIVE
+                      </span>
+                      <span className="live-date-tag">📅 12 Dec 2026 · 8:26 PM IST</span>
+                    </div>
+                    <h3 className="gallery-live-title">
+                      Bhuvan &amp; Manasa Kalyana Mahotsavam Live
+                    </h3>
+                    <p className="gallery-live-desc">
+                      Tune into the live celebration and join both families in celebrating the sacred union.
+                    </p>
+                    <div className="gallery-live-actions">
+                      <a
+                        href={`https://www.youtube.com/watch?v=${liveVideoId}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="gallery-live-btn"
+                        onClick={() => {
+                          if (onPauseMusic) onPauseMusic();
+                        }}
+                      >
+                        <span aria-hidden="true">▶</span> Open in YouTube App
+                      </a>
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <div className="gallery-live-placeholder">
+                  <div className="live-placeholder-icon" aria-hidden="true">
+                    🔴
+                  </div>
+                  <span className="live-placeholder-badge">
+                    WEDDING CEREMONY LIVE STREAM · ప్రత్యక్ష ప్రసారం
+                  </span>
+                  <h3 className="live-placeholder-title">
+                    Sacred Wedding Live Stream
+                  </h3>
+                  <p className="live-placeholder-telugu">
+                    శ్రీ భువన్ తేజ &amp; మానస కళ్యాణ మహోత్సవ ప్రత్యక్ష ప్రసారం
+                  </p>
+                  <div className="live-placeholder-details">
+                    <div className="live-detail-item">
+                      <span className="live-detail-icon">📅</span>
+                      <div>
+                        <strong>Date &amp; Muhurtham</strong>
+                        <p>Saturday, 12 December 2026 · 8:26 PM IST</p>
+                      </div>
+                    </div>
+                    <div className="live-detail-item">
+                      <span className="live-detail-icon">🏛️</span>
+                      <div>
+                        <strong>Sacred Venue</strong>
+                        <p>SVPC Conventions, Rajamahendravaram</p>
+                      </div>
+                    </div>
+                  </div>
+                  <p className="live-placeholder-note">
+                    ✨ The official YouTube live stream will broadcast right here during the wedding ceremony. Stay tuned to witness the auspicious Jeelakarra Bellam &amp; Mangalasutra Dharana!
+                  </p>
+                  <div className="live-placeholder-hint">
+                    <code>💡 Set VITE_YOUTUBE_LIVE_URL in .env to activate live streaming</code>
+                  </div>
+                </div>
+              )}
+            </div>
+          </section>
+        )}
 
         {/* VIDEOS SECTION */}
         {showVideos && (
