@@ -11,6 +11,18 @@ import { PROPERTIES } from './accommodation.js';
 
 const env = typeof import.meta !== 'undefined' && import.meta.env ? import.meta.env : {};
 
+const SUPABASE_URL = String(env.VITE_SUPABASE_URL || '').replace(/\/+$/, '');
+const SUPABASE_KEY = env.VITE_SUPABASE_ANON_KEY || '';
+
+/** True when Supabase credentials are provided in the environment. */
+export const supabaseConfigured = Boolean(SUPABASE_URL && SUPABASE_KEY);
+
+const supabaseHeaders = () => ({
+  apikey: SUPABASE_KEY,
+  Authorization: `Bearer ${SUPABASE_KEY}`,
+  'Content-Type': 'application/json',
+});
+
 const SESSION_STORAGE_KEY = 'weddingAccommodationHostSession';
 export const TRACKER_STORAGE_KEY = 'wedding_accommodation_tracker_v5';
 const HOST_PIN_KEY = 'wedding_host_pin_code_v5';
@@ -23,6 +35,209 @@ const DEFAULT_ADMIN_PIN = '1968';
 
 export const bookingConfigured = true;
 const WRONG_PIN = 'Incorrect passcode. Please try again.';
+
+/**
+ * Confirmed Seed Room Allocations from accommodation.xlsx & supabase/seed-bookings.sql
+ * Guarantees that public guests and visitors immediately see the 16 allocated rooms across
+ * both properties without starting with an empty screen.
+ */
+export const DEFAULT_SEED_ENTRIES = [
+  // 1. Krishna Inn (8 Rooms)
+  {
+    id: 'seed-ki-1',
+    propertyId: 'krishna-inn',
+    roomNumber: '1',
+    guestName: 'Sridhar',
+    guestPhone: '',
+    checkIn: '2026-12-10',
+    checkOut: '2026-12-13',
+    status: 'occupied',
+    createdAt: '2026-10-28T09:00:00.000Z',
+    updatedAt: '2026-10-28T09:00:00.000Z',
+  },
+  {
+    id: 'seed-ki-2',
+    propertyId: 'krishna-inn',
+    roomNumber: '2',
+    guestName: 'Radha Krisha',
+    guestPhone: '',
+    checkIn: '2026-12-12',
+    checkOut: '2026-12-13',
+    status: 'occupied',
+    createdAt: '2026-10-28T09:00:00.000Z',
+    updatedAt: '2026-10-28T09:00:00.000Z',
+  },
+  {
+    id: 'seed-ki-3',
+    propertyId: 'krishna-inn',
+    roomNumber: '3',
+    guestName: 'K Subbarao',
+    guestPhone: '',
+    checkIn: '2026-12-12',
+    checkOut: '2026-12-13',
+    status: 'occupied',
+    createdAt: '2026-10-28T09:00:00.000Z',
+    updatedAt: '2026-10-28T09:00:00.000Z',
+  },
+  {
+    id: 'seed-ki-4',
+    propertyId: 'krishna-inn',
+    roomNumber: '4',
+    guestName: 'Shekar, Surya',
+    guestPhone: '',
+    checkIn: '2026-12-12',
+    checkOut: '2026-12-13',
+    status: 'occupied',
+    createdAt: '2026-10-28T09:00:00.000Z',
+    updatedAt: '2026-10-28T09:00:00.000Z',
+  },
+  {
+    id: 'seed-ki-5',
+    propertyId: 'krishna-inn',
+    roomNumber: '5',
+    guestName: 'Additional',
+    guestPhone: '',
+    checkIn: '2026-12-12',
+    checkOut: '2026-12-13',
+    status: 'occupied',
+    createdAt: '2026-10-28T09:00:00.000Z',
+    updatedAt: '2026-10-28T09:00:00.000Z',
+  },
+  {
+    id: 'seed-ki-6',
+    propertyId: 'krishna-inn',
+    roomNumber: '6',
+    guestName: 'Teja - Director',
+    guestPhone: '',
+    checkIn: '2026-12-11',
+    checkOut: '2026-12-13',
+    status: 'occupied',
+    createdAt: '2026-10-28T09:00:00.000Z',
+    updatedAt: '2026-10-28T09:00:00.000Z',
+  },
+  {
+    id: 'seed-ki-7',
+    propertyId: 'krishna-inn',
+    roomNumber: '7',
+    guestName: 'Teja - Dheeraj',
+    guestPhone: '',
+    checkIn: '2026-12-12',
+    checkOut: '2026-12-13',
+    status: 'occupied',
+    createdAt: '2026-10-28T09:00:00.000Z',
+    updatedAt: '2026-10-28T09:00:00.000Z',
+  },
+  {
+    id: 'seed-ki-8',
+    propertyId: 'krishna-inn',
+    roomNumber: '8',
+    guestName: 'Teja - Hari & Kranthi',
+    guestPhone: '',
+    checkIn: '2026-12-12',
+    checkOut: '2026-12-13',
+    status: 'occupied',
+    createdAt: '2026-10-28T09:00:00.000Z',
+    updatedAt: '2026-10-28T09:00:00.000Z',
+  },
+
+  // 2. SVPC Convention Hall 1 (8 Rooms)
+  {
+    id: 'seed-svpc-1',
+    propertyId: 'svpc',
+    roomNumber: '1',
+    guestName: 'Aneel, Bala, Shiva',
+    guestPhone: '',
+    checkIn: '2026-12-12',
+    checkOut: '2026-12-13',
+    status: 'occupied',
+    createdAt: '2026-10-28T09:00:00.000Z',
+    updatedAt: '2026-10-28T09:00:00.000Z',
+  },
+  {
+    id: 'seed-svpc-2',
+    propertyId: 'svpc',
+    roomNumber: '2',
+    guestName: 'Shristi',
+    guestPhone: '',
+    checkIn: '2026-12-12',
+    checkOut: '2026-12-13',
+    status: 'occupied',
+    createdAt: '2026-10-28T09:00:00.000Z',
+    updatedAt: '2026-10-28T09:00:00.000Z',
+  },
+  {
+    id: 'seed-svpc-3',
+    propertyId: 'svpc',
+    roomNumber: '3',
+    guestName: 'Btech Boys',
+    guestPhone: '',
+    checkIn: '2026-12-12',
+    checkOut: '2026-12-13',
+    status: 'occupied',
+    createdAt: '2026-10-28T09:00:00.000Z',
+    updatedAt: '2026-10-28T09:00:00.000Z',
+  },
+  {
+    id: 'seed-svpc-4',
+    propertyId: 'svpc',
+    roomNumber: '4',
+    guestName: 'Btech Girls',
+    guestPhone: '',
+    checkIn: '2026-12-12',
+    checkOut: '2026-12-13',
+    status: 'occupied',
+    createdAt: '2026-10-28T09:00:00.000Z',
+    updatedAt: '2026-10-28T09:00:00.000Z',
+  },
+  {
+    id: 'seed-svpc-5',
+    propertyId: 'svpc',
+    roomNumber: '5',
+    guestName: 'Btech Girls',
+    guestPhone: '',
+    checkIn: '2026-12-12',
+    checkOut: '2026-12-13',
+    status: 'occupied',
+    createdAt: '2026-10-28T09:00:00.000Z',
+    updatedAt: '2026-10-28T09:00:00.000Z',
+  },
+  {
+    id: 'seed-svpc-6',
+    propertyId: 'svpc',
+    roomNumber: '6',
+    guestName: 'Manisha, Teja, Shylu',
+    guestPhone: '',
+    checkIn: '2026-12-12',
+    checkOut: '2026-12-13',
+    status: 'occupied',
+    createdAt: '2026-10-28T09:00:00.000Z',
+    updatedAt: '2026-10-28T09:00:00.000Z',
+  },
+  {
+    id: 'seed-svpc-7',
+    propertyId: 'svpc',
+    roomNumber: '7',
+    guestName: 'Chanti Frnds',
+    guestPhone: '',
+    checkIn: '2026-12-12',
+    checkOut: '2026-12-13',
+    status: 'occupied',
+    createdAt: '2026-10-28T09:00:00.000Z',
+    updatedAt: '2026-10-28T09:00:00.000Z',
+  },
+  {
+    id: 'seed-svpc-8',
+    propertyId: 'svpc',
+    roomNumber: '8',
+    guestName: 'Chanti Frnds',
+    guestPhone: '',
+    checkIn: '2026-12-12',
+    checkOut: '2026-12-13',
+    status: 'occupied',
+    createdAt: '2026-10-28T09:00:00.000Z',
+    updatedAt: '2026-10-28T09:00:00.000Z',
+  },
+];
 
 /* ---------------------------------------------------------------- Passcode Management */
 
@@ -130,7 +345,8 @@ const EMPTY_PURGE_MIGRATION_KEY = 'wedding_tracker_empty_purged_v3';
 
 /**
  * Determines if a tracker entry is empty, incomplete, or corrupted.
- * An entry is empty if it lacks a valid room number or lacks a valid guest name.
+ * Occupied entries require both a room number and a guest name.
+ * Vacant entries only require a valid room number.
  */
 export function isEntryEmpty(entry) {
   if (!entry || typeof entry !== 'object') return true;
@@ -143,9 +359,11 @@ export function isEntryEmpty(entry) {
     return true;
   }
 
-  // Guest name must be non-empty and not a placeholder
-  if (!guest || /^(name not specified|unnamed|undefined|null|n\/a|none)$/i.test(guest)) {
-    return true;
+  // Occupied rooms strictly require a guest name
+  if (entry.status === 'occupied') {
+    if (!guest || /^(name not specified|unnamed|undefined|null|n\/a|none)$/i.test(guest)) {
+      return true;
+    }
   }
 
   return false;
@@ -158,14 +376,18 @@ export function isEntryValid(entry) {
 function cleanOldStorage() {
   try {
     if (!localStorage.getItem(MIGRATION_KEY)) {
-      // Clear all legacy mock rooms keys
+      // Clear legacy storage keys
       localStorage.removeItem('wedding_accommodation_bookings_v2');
       localStorage.removeItem('wedding_accommodation_v3_migrated');
       localStorage.removeItem('wedding_host_pin_code');
-      localStorage.removeItem(TRACKER_STORAGE_KEY);
       localStorage.setItem(MIGRATION_KEY, '1');
       localStorage.setItem(HOST_PIN_KEY, DEFAULT_HOST_PIN);
       localStorage.setItem(ADMIN_PIN_KEY, DEFAULT_ADMIN_PIN);
+
+      // Pre-seed with default 16 rooms if not already stored
+      if (!localStorage.getItem(TRACKER_STORAGE_KEY)) {
+        localStorage.setItem(TRACKER_STORAGE_KEY, JSON.stringify(DEFAULT_SEED_ENTRIES));
+      }
     }
 
     // Always wipe persistent session tokens so refreshing the page automatically logs out
@@ -176,7 +398,7 @@ function cleanOldStorage() {
       // ignore
     }
 
-    // Force purge all empty entries from storage immediately
+    // Force purge corrupted entries from storage immediately
     const raw = localStorage.getItem(TRACKER_STORAGE_KEY);
     if (raw) {
       const parsed = JSON.parse(raw);
@@ -201,21 +423,32 @@ let memoryStore = [];
 
 /**
  * Reads all tracker entries from local storage (or memory fallback in Node/SSR).
- * Starts completely empty — no mock or pre-defined names!
+ * Defaults to confirmed seed entries so all public guests see the 16 allocated rooms.
  */
 export function fetchTrackerEntries() {
   try {
     cleanOldStorage();
     if (typeof localStorage === 'undefined') {
-      return memoryStore.filter(isEntryValid);
+      return (memoryStore.length ? memoryStore : DEFAULT_SEED_ENTRIES).filter(isEntryValid);
     }
     const raw = localStorage.getItem(TRACKER_STORAGE_KEY);
-    if (!raw) return [];
+    if (!raw) {
+      writeTrackerEntries(DEFAULT_SEED_ENTRIES);
+      return DEFAULT_SEED_ENTRIES;
+    }
     const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed)) return [];
+    if (!Array.isArray(parsed) || parsed.length === 0) {
+      writeTrackerEntries(DEFAULT_SEED_ENTRIES);
+      return DEFAULT_SEED_ENTRIES;
+    }
 
     // Filter out all empty, incomplete, or corrupted entries
     const valid = parsed.filter(isEntryValid);
+
+    if (valid.length === 0) {
+      writeTrackerEntries(DEFAULT_SEED_ENTRIES);
+      return DEFAULT_SEED_ENTRIES;
+    }
 
     // If invalid/empty entries were found, immediately sync cleaned list back
     if (valid.length !== parsed.length) {
@@ -223,8 +456,44 @@ export function fetchTrackerEntries() {
     }
     return valid;
   } catch {
-    return memoryStore.filter(isEntryValid);
+    return (memoryStore.length ? memoryStore : DEFAULT_SEED_ENTRIES).filter(isEntryValid);
   }
+}
+
+/**
+ * Real-time cloud sync: fetches live allocations from Supabase if configured,
+ * otherwise falls back to local storage and confirmed seed entries.
+ */
+export async function syncFromCloud() {
+  if (!supabaseConfigured) {
+    return fetchTrackerEntries();
+  }
+
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/accommodation_tracker?select=*&order=createdAt.desc`, {
+      method: 'GET',
+      headers: supabaseHeaders(),
+    });
+
+    if (res.ok) {
+      const data = await res.json();
+      if (Array.isArray(data) && data.length > 0) {
+        const valid = data.filter(isEntryValid);
+        if (valid.length > 0) {
+          memoryStore = [...valid];
+          if (typeof localStorage !== 'undefined') {
+            localStorage.setItem(TRACKER_STORAGE_KEY, JSON.stringify(valid));
+          }
+          broadcastSync();
+          return valid;
+        }
+      }
+    }
+  } catch (err) {
+    console.warn('Could not sync tracker entries from Supabase cloud:', err);
+  }
+
+  return fetchTrackerEntries();
 }
 
 function writeTrackerEntries(entries) {
@@ -421,6 +690,20 @@ export async function saveTrackerEntry({
         updatedAt: now,
       };
       writeTrackerEntries(entries);
+
+      if (supabaseConfigured) {
+        try {
+          fetch(`${SUPABASE_URL}/rest/v1/accommodation_tracker`, {
+            method: 'POST',
+            headers: {
+              ...supabaseHeaders(),
+              Prefer: 'resolution=merge-duplicates',
+            },
+            body: JSON.stringify(entries[index]),
+          }).catch(() => {});
+        } catch {}
+      }
+
       return entries[index];
     }
   }
@@ -441,6 +724,20 @@ export async function saveTrackerEntry({
 
   entries.unshift(newEntry); // Newest entries on top
   writeTrackerEntries(entries);
+
+  if (supabaseConfigured) {
+    try {
+      fetch(`${SUPABASE_URL}/rest/v1/accommodation_tracker`, {
+        method: 'POST',
+        headers: {
+          ...supabaseHeaders(),
+          Prefer: 'resolution=merge-duplicates',
+        },
+        body: JSON.stringify(newEntry),
+      }).catch(() => {});
+    } catch {}
+  }
+
   return newEntry;
 }
 
@@ -456,6 +753,17 @@ export async function toggleEntryStatus(id) {
   target.updatedAt = new Date().toISOString();
 
   writeTrackerEntries(entries);
+
+  if (supabaseConfigured) {
+    try {
+      fetch(`${SUPABASE_URL}/rest/v1/accommodation_tracker?id=eq.${encodeURIComponent(id)}`, {
+        method: 'PATCH',
+        headers: supabaseHeaders(),
+        body: JSON.stringify({ status: target.status, updatedAt: target.updatedAt }),
+      }).catch(() => {});
+    } catch {}
+  }
+
   return target;
 }
 
@@ -466,6 +774,16 @@ export async function deleteTrackerEntry(id) {
   const entries = fetchTrackerEntries();
   const filtered = entries.filter((e) => e.id !== id);
   writeTrackerEntries(filtered);
+
+  if (supabaseConfigured) {
+    try {
+      fetch(`${SUPABASE_URL}/rest/v1/accommodation_tracker?id=eq.${encodeURIComponent(id)}`, {
+        method: 'DELETE',
+        headers: supabaseHeaders(),
+      }).catch(() => {});
+    } catch {}
+  }
+
   return filtered;
 }
 
