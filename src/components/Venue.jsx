@@ -50,7 +50,7 @@ function Venue() {
             <h3>KRISHNA INN</h3>
             <p className="venue-card-telugu">కుటుంబ &amp; బంధుమిత్రుల వసతి గృహం</p>
             <p className="venue-card-address">
-              📍 Near Danavaipeta, Rajamahendravaram, Andhra Pradesh
+              📍 Prakasam Nagar (Near Danavaipeta), Rajamahendravaram, Andhra Pradesh
             </p>
             <p className="venue-card-timing">
               🛏️ <strong>Stay:</strong> Family &amp; Wedding Guests Stay
@@ -60,7 +60,7 @@ function Venue() {
                 title="Krishna Inn location on Google Maps"
                 loading="lazy"
                 referrerPolicy="no-referrer-when-downgrade"
-                src="https://www.google.com/maps?q=KRISHNA%20INN%2C%2017.0069703%2C81.790074&z=15&output=embed"
+                src="https://www.google.com/maps?q=KRISHNA+INN+Rajahmundry&z=16&output=embed"
               />
             </div>
             <a
