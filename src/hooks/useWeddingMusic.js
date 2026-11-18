@@ -152,9 +152,6 @@ export function useWeddingMusic({ autoStartIfActive = false } = {}) {
 
     if (!isSameSrc) {
       audio.src = songUrl;
-      try {
-        audio.load();
-      } catch {}
     }
 
     // Safely set startTime after metadata is loaded (prevents Android InvalidStateError)
@@ -187,6 +184,25 @@ export function useWeddingMusic({ autoStartIfActive = false } = {}) {
     } catch (err) {
       console.warn('Wedding music play deferred until user interaction:', err && err.message);
       setMusicPlaying(false);
+
+      // On Android / iOS, if user gesture was deferred or throttled, unlock on first user interaction
+      const unlockAudio = () => {
+        ['pointerdown', 'touchstart', 'click'].forEach((evt) => {
+          window.removeEventListener(evt, unlockAudio);
+        });
+        const currentAudio = audioRef.current;
+        if (currentAudio && currentAudio.paused) {
+          currentAudio
+            .play()
+            .then(() => {
+              setMusicPlaying(true);
+            })
+            .catch(() => {});
+        }
+      };
+      ['pointerdown', 'touchstart', 'click'].forEach((evt) => {
+        window.addEventListener(evt, unlockAudio, { once: true, passive: true });
+      });
     }
   }, []);
 
@@ -276,6 +292,11 @@ export function useWeddingMusic({ autoStartIfActive = false } = {}) {
 
   const handleAudioError = useCallback((e) => {
     console.warn('Audio error encountered:', e);
+    // Ignore harmless user aborts
+    const audio = audioRef.current;
+    if (audio && audio.error && audio.error.code === 1) { // MEDIA_ERR_ABORTED = 1
+      return;
+    }
     // Prevent rapid infinite error looping on Android
     if (errorRetriesRef.current < 2) {
       errorRetriesRef.current += 1;
@@ -307,10 +328,13 @@ export function useWeddingMusic({ autoStartIfActive = false } = {}) {
     }
   }, [autoStartIfActive, playSongAtIndex]);
 
+  const currentSongUrl = getRootAssetUrl(SONG_FILES[currentSongIndex] || SONG_FILES[0]);
+
   return {
     audioRef,
     musicPlaying,
     currentSongIndex,
+    currentSongUrl,
     startMusic,
     stopMusic,
     pauseMusic,

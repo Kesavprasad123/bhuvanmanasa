@@ -25,6 +25,7 @@ function Opening({ isOpen: siteOpen, onOpen, onPrefetch }) {
   const [hidden, setHidden] = useState(false);
   const [jsBlastParticles, setJsBlastParticles] = useState([]);
   const blastCreated = useRef(false);
+  const hasTriggeredRef = useRef(false);
 
   useEffect(() => {
     if (siteOpen && !hidden) {
@@ -67,8 +68,12 @@ function Opening({ isOpen: siteOpen, onOpen, onPrefetch }) {
     }, 1800);
   }, []);
 
-  const handleTriggerOpen = useCallback(() => {
-    if (envelopeOpen) return;
+  const handleTriggerOpen = useCallback((e) => {
+    if (hasTriggeredRef.current) return;
+    hasTriggeredRef.current = true;
+    if (e && e.cancelable && e.type === 'touchend') {
+      e.preventDefault();
+    }
     setEnvelopeOpen(true);
     createEnvelopeBlast();
     onOpen();
@@ -80,7 +85,7 @@ function Opening({ isOpen: siteOpen, onOpen, onPrefetch }) {
     setTimeout(() => {
       setHidden(true);
     }, 2500);
-  }, [envelopeOpen, onOpen, createEnvelopeBlast]);
+  }, [onOpen, createEnvelopeBlast]);
 
   if (hidden) return null;
 

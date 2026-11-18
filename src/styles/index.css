@@ -1215,11 +1215,29 @@
     transform: translate(calc(-50% + 330px), -50%) scale(0.9);
   }
 
-  /* Off-stage Cards: completely hidden so they never fly across or collide */
+  /* Smooth Buffer & Off-stage Cards: fluid sliding without display:none snapping */
+  .stage-card.is-far-prev {
+    transform: translate(calc(-50% - 540px), -50%) scale(0.76);
+    z-index: 2;
+    opacity: 0;
+    pointer-events: none;
+    visibility: hidden;
+  }
+
+  .stage-card.is-far-next {
+    transform: translate(calc(-50% + 540px), -50%) scale(0.76);
+    z-index: 2;
+    opacity: 0;
+    pointer-events: none;
+    visibility: hidden;
+  }
+
   .stage-card.is-offstage {
-    display: none !important;
-    opacity: 0 !important;
-    pointer-events: none !important;
+    transform: translate(-50%, -50%) scale(0.65);
+    z-index: 1;
+    opacity: 0;
+    pointer-events: none;
+    visibility: hidden;
   }
 
   /* Card Overlays & Content */
@@ -1737,6 +1755,20 @@
     .stage-card.is-next {
       transform: translate(calc(-50% + 76vw), -50%) scale(0.82);
       opacity: 0.35;
+    }
+
+    .stage-card.is-far-prev {
+      transform: translate(calc(-50% - 110vw), -50%) scale(0.72);
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+    }
+
+    .stage-card.is-far-next {
+      transform: translate(calc(-50% + 110vw), -50%) scale(0.72);
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
     }
 
     .side-card-hint {
@@ -2996,8 +3028,8 @@
       font-size: calc(var(--size) * .78);
     }
 
-    .falling-flowers span:nth-child(n+19) {
-      display: none;
+    .falling-flowers span:nth-child(n+9) {
+      display: none !important;
     }
   }
 
