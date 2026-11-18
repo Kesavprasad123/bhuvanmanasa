@@ -534,24 +534,6 @@ function HomeVideoSection({ onNavigateToGallery, onPauseMusic, onResumeMusic }) 
             />
           ))}
         </div>
-
-        {/* Call to Action Banner to Gallery Page */}
-        <div className="video-gallery-cta-banner reveal">
-          <div className="cta-banner-text">
-            <span className="cta-eyebrow">PHOTO GALLERIES &amp; MEMORIES</span>
-            <h3>Explore Ceremony Photos &amp; More</h3>
-            <p>
-              Browse Pellikoduku, Pellikuthuru, Haldi Snanam, Mehendi, Sangeeth, and sacred Muhurtham ceremonies.
-            </p>
-          </div>
-          <button
-            type="button"
-            className="gold-button cta-gallery-btn"
-            onClick={onNavigateToGallery}
-          >
-            📸 View Full Gallery →
-          </button>
-        </div>
       </div>
 
       {/* EXTENDED FULL REEL LIGHTBOX MODAL */}
