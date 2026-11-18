@@ -66,19 +66,6 @@ const EVENTS = [
   },
   {
     number: '05',
-    title: 'Sangeeth',
-    teluguTitle: 'సంగీత్ సంబరం',
-    subtitle: 'An enchanting starlit evening of beats, dance, sparkle & harmony',
-    image: asset('assets/sangeeth.webp'),
-    time: '7:00 PM onwards',
-    date: '11-12-2026',
-    venue: 'Avinya Banquet & Suits',
-    color: '#4954b0',
-    mapUrl: 'https://maps.app.goo.gl/rdH9ZzYK1vsZ3sDB8?g_st=iw',
-    coordinates: { lat: 17.0082807, lng: 81.8058498 },
-  },
-  {
-    number: '06',
     title: 'Mehandi',
     teluguTitle: 'మెహందీ వేడుక',
     subtitle: 'Delicate henna swirls, joyous songs & vibrant festive charm',
@@ -87,6 +74,19 @@ const EVENTS = [
     date: '11-12-2026',
     venue: 'Avinya Banquet & Suits',
     color: '#3d8253',
+    mapUrl: 'https://maps.app.goo.gl/rdH9ZzYK1vsZ3sDB8?g_st=iw',
+    coordinates: { lat: 17.0082807, lng: 81.8058498 },
+  },
+  {
+    number: '06',
+    title: 'Sangeeth',
+    teluguTitle: 'సంగీత్ సంబరం',
+    subtitle: 'An enchanting starlit evening of beats, dance, sparkle & harmony',
+    image: asset('assets/sangeeth.webp'),
+    time: '7:00 PM onwards',
+    date: '11-12-2026',
+    venue: 'Avinya Banquet & Suits',
+    color: '#4954b0',
     mapUrl: 'https://maps.app.goo.gl/rdH9ZzYK1vsZ3sDB8?g_st=iw',
     coordinates: { lat: 17.0082807, lng: 81.8058498 },
   },
@@ -127,7 +127,9 @@ function Events() {
   const timelineNavRef = useRef(null);
   const tabRefs = useRef([]);
   const touchStartXRef = useRef(null);
+  const touchStartYRef = useRef(null);
   const touchEndXRef = useRef(null);
+  const touchEndYRef = useRef(null);
   const total = EVENTS.length;
 
   const goToNext = useCallback(() => {
@@ -175,29 +177,44 @@ function Events() {
     }
   }, []);
 
-  // Touch Swipe Handlers for mobile
+  // Touch Swipe Handlers for mobile (respects vertical page scrolling)
   const handleTouchStart = (e) => {
     touchStartXRef.current = e.touches[0].clientX;
+    touchStartYRef.current = e.touches[0].clientY;
     touchEndXRef.current = null;
+    touchEndYRef.current = null;
   };
 
   const handleTouchMove = (e) => {
     touchEndXRef.current = e.touches[0].clientX;
+    touchEndYRef.current = e.touches[0].clientY;
   };
 
   const handleTouchEnd = () => {
-    if (touchStartXRef.current === null || touchEndXRef.current === null) return;
-    const diff = touchStartXRef.current - touchEndXRef.current;
-    const minSwipeDistance = 45;
+    if (
+      touchStartXRef.current === null ||
+      touchEndXRef.current === null ||
+      touchStartYRef.current === null ||
+      touchEndYRef.current === null
+    ) {
+      return;
+    }
+    const diffX = touchStartXRef.current - touchEndXRef.current;
+    const diffY = touchStartYRef.current - touchEndYRef.current;
 
-    if (diff > minSwipeDistance) {
-      goToNext();
-    } else if (diff < -minSwipeDistance) {
-      goToPrev();
+    // Only swipe if horizontal movement is dominant (prevents vertical page scroll from getting stuck)
+    if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > 40) {
+      if (diffX > 0) {
+        goToNext();
+      } else {
+        goToPrev();
+      }
     }
 
     touchStartXRef.current = null;
+    touchStartYRef.current = null;
     touchEndXRef.current = null;
+    touchEndYRef.current = null;
   };
 
   // Keyboard navigation
@@ -227,11 +244,14 @@ function Events() {
     return dist < 1 ? `${(dist * 1000).toFixed(0)} m` : `${dist.toFixed(1)} km`;
   };
 
-  // Card position logic: 1 active, 1 prev, 1 next; all others hidden (ZERO wrapping collisions!)
+  // Fluid circular stage card position logic (seamless 60fps hardware transitions)
   const getCardStatus = (index) => {
-    if (index === activeIndex) return 'is-active';
-    if (index === (activeIndex - 1 + total) % total) return 'is-prev';
-    if (index === (activeIndex + 1) % total) return 'is-next';
+    const diff = (index - activeIndex + total) % total;
+    if (diff === 0) return 'is-active';
+    if (diff === 1) return 'is-next';
+    if (diff === total - 1) return 'is-prev';
+    if (diff === 2) return 'is-far-next';
+    if (diff === total - 2) return 'is-far-prev';
     return 'is-offstage';
   };
 
@@ -301,7 +321,7 @@ function Events() {
             &#8250;
           </button>
 
-          {/* 3-Card Stage Area */}
+          {/* Fluid 3-Card Stage Area with continuous GPU-accelerated transforms */}
           <div className="events-stage-carousel">
             {EVENTS.map((event, index) => {
               const status = getCardStatus(index);
@@ -310,17 +330,6 @@ function Events() {
               const isNext = status === 'is-next';
               const isFlipped = !!flippedCards[index];
               const distance = getDistance(event.coordinates);
-
-              // Off-stage cards are not rendered into the active visual stage to avoid any cross-flying
-              if (status === 'is-offstage') {
-                return (
-                  <article
-                    key={event.number}
-                    className="stage-card is-offstage"
-                    aria-hidden="true"
-                  />
-                );
-              }
 
               return (
                 <article
@@ -333,6 +342,7 @@ function Events() {
                   role="button"
                   tabIndex={isActive ? 0 : -1}
                   aria-current={isActive ? 'true' : 'false'}
+                  aria-hidden={!isActive && status !== 'is-prev' && status !== 'is-next'}
                   aria-label={`${event.title} - Event ${event.number}`}
                 >
                   {/* ===== FRONT FACE ===== */}

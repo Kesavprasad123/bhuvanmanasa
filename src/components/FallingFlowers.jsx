@@ -32,10 +32,10 @@ const STATIC_FLOWERS = [
 ];
 
 function FallingFlowers() {
-  // Generate additional dynamic flowers on mount
+  // Generate additional dynamic flowers on mount (desktop only, to keep mobile lightweight)
   const dynamicFlowers = useMemo(() => {
     const isMobile = typeof window !== 'undefined' && window.innerWidth <= 600;
-    const count = isMobile ? 8 : 14;
+    const count = isMobile ? 0 : 12;
     const flowers = [];
 
     for (let i = 0; i < count; i++) {

@@ -38,6 +38,7 @@ function App({ initialRoute = null }) {
   const {
     audioRef,
     musicPlaying,
+    currentSongUrl,
     startMusic,
     pauseMusic,
     resumeMusic,
@@ -182,6 +183,7 @@ function App({ initialRoute = null }) {
       {/* Root audio element that persists continuously across all views */}
       <audio
         ref={audioRef}
+        src={currentSongUrl}
         onEnded={handleSongEnded}
         onError={handleAudioError}
         preload="none"

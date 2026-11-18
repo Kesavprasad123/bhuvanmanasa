@@ -16,6 +16,26 @@ const REEL_VIDEOS = [
     icon: '👑',
   },
   {
+    id: 'bride-pellikuthuru',
+    src: asset('videos/Manasa_Pellikuthuru_Corrected_HD.mp4'),
+    poster: asset('assets/pellikuthuru.webp'),
+    title: "The Bride's Sacred Glow",
+    teluguTitle: 'పెళ్ళికూతురు మంగళ వేడుక',
+    subtitle: 'The divine, radiant moments of Manasa as bride',
+    badge: 'Bride Ceremony',
+    icon: '🌸',
+  },
+  {
+    id: 'save-the-date',
+    src: asset('videos/Bhuvan_Manasa_Save_The_Date_Eyes_Corrected_HD.mp4'),
+    poster: asset('assets/feature-img.webp'),
+    title: 'Save The Date & Sacred Union',
+    teluguTitle: 'సేవ్ ది డేట్ · శుభ ముహూర్తం',
+    subtitle: 'A beautiful glimpse into our romantic journey & celebrations',
+    badge: 'Save The Date',
+    icon: '💍',
+  },
+  {
     id: 'cinema-invitation',
     src: asset('videos/Bhuvan_Manasa_Cinema_Invitation_Clean_Full_HD.mp4'),
     poster: asset('assets/weddding1.webp'),
@@ -174,6 +194,14 @@ function ReelCard({
           loop
           preload={shouldPlay ? 'auto' : 'none'}
           onTimeUpdate={handleTimeUpdate}
+          onCanPlay={() => {
+            if (shouldPlay && isSectionInView && !isModalOpen && videoRef.current && videoRef.current.paused) {
+              const p = videoRef.current.play();
+              if (p !== undefined) {
+                p.then(() => setIsPlaying(true)).catch(() => {});
+              }
+            }
+          }}
           onPause={() => {
             setIsPlaying(false);
             if (isUnmuted) onVideoPause();
@@ -284,7 +312,6 @@ function ReelCard({
 function HomeVideoSection({ onNavigateToGallery, onPauseMusic, onResumeMusic }) {
   const [unmutedId, setUnmutedId] = useState(null);
   const [expandedVideo, setExpandedVideo] = useState(null);
-  const [showExitConfirm, setShowExitConfirm] = useState(false);
   const [activeReelDot, setActiveReelDot] = useState(0);
   const [isSectionInView, setIsSectionInView] = useState(false);
   const [isMobile, setIsMobile] = useState(() => {
@@ -348,37 +375,19 @@ function HomeVideoSection({ onNavigateToGallery, onPauseMusic, onResumeMusic }) 
     setUnmutedId(null);
     // 3. Set extended video
     setExpandedVideo(video);
-    setShowExitConfirm(false);
   }, [onPauseMusic]);
 
-  // When user attempts to exit (clicked empty backdrop space or close button)
-  const handleBackdropClick = useCallback(() => {
-    // Do NOT immediately dismiss! Request user confirmation first
-    setShowExitConfirm(true);
-  }, []);
-
-  // User confirmed exit from the confirmation dialog
-  const handleConfirmExit = useCallback(() => {
-    setShowExitConfirm(false);
+  // Direct exit: immediately closes extended reel without asking for double confirmation
+  const handleCloseModal = useCallback(() => {
     if (modalVideoRef.current) {
       modalVideoRef.current.pause();
     }
     setExpandedVideo(null);
-    // Resume website music from exact paused spot!
+    // Resume website music from exact paused spot
     if (onResumeMusic) {
       onResumeMusic();
     }
   }, [onResumeMusic]);
-
-  // User chose to stay and keep watching
-  const handleCancelExit = useCallback(() => {
-    setShowExitConfirm(false);
-    // Make sure modal video keeps playing with sound
-    if (modalVideoRef.current && modalVideoRef.current.paused) {
-      modalVideoRef.current.play().catch(() => {});
-    }
-    if (onPauseMusic) onPauseMusic();
-  }, [onPauseMusic]);
 
   // Lightbox Next/Prev navigation
   const handleNextExpand = useCallback(() => {
@@ -386,7 +395,6 @@ function HomeVideoSection({ onNavigateToGallery, onPauseMusic, onResumeMusic }) 
     const currentIndex = REEL_VIDEOS.findIndex((v) => v.id === expandedVideo.id);
     const nextIndex = (currentIndex + 1) % REEL_VIDEOS.length;
     setExpandedVideo(REEL_VIDEOS[nextIndex]);
-    setShowExitConfirm(false);
   }, [expandedVideo]);
 
   const handlePrevExpand = useCallback(() => {
@@ -394,7 +402,6 @@ function HomeVideoSection({ onNavigateToGallery, onPauseMusic, onResumeMusic }) 
     const currentIndex = REEL_VIDEOS.findIndex((v) => v.id === expandedVideo.id);
     const prevIndex = (currentIndex - 1 + REEL_VIDEOS.length) % REEL_VIDEOS.length;
     setExpandedVideo(REEL_VIDEOS[prevIndex]);
-    setShowExitConfirm(false);
   }, [expandedVideo]);
 
   // Ensure website music stays paused while modal video is open
@@ -409,14 +416,14 @@ function HomeVideoSection({ onNavigateToGallery, onPauseMusic, onResumeMusic }) 
     if (!expandedVideo) return;
     const onKeyDown = (e) => {
       if (e.key === 'Escape') {
-        setShowExitConfirm(true);
+        handleCloseModal();
       }
       if (e.key === 'ArrowRight') handleNextExpand();
       if (e.key === 'ArrowLeft') handlePrevExpand();
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [expandedVideo, handleNextExpand, handlePrevExpand]);
+  }, [expandedVideo, handleCloseModal, handleNextExpand, handlePrevExpand]);
 
   // Cleanup on unmount ONLY
   useEffect(() => {
@@ -487,7 +494,7 @@ function HomeVideoSection({ onNavigateToGallery, onPauseMusic, onResumeMusic }) 
           </svg>
         </div>
 
-        {/* 4-Reels Showcase Container */}
+        {/* 6-Reels Showcase Container */}
         <div
           ref={showcaseRef}
           className="hvs-reels-showcase reveal"
@@ -547,31 +554,13 @@ function HomeVideoSection({ onNavigateToGallery, onPauseMusic, onResumeMusic }) 
             />
           ))}
         </div>
-
-        {/* Call to Action Banner to Gallery Page */}
-        <div className="video-gallery-cta-banner reveal">
-          <div className="cta-banner-text">
-            <span className="cta-eyebrow">PHOTO GALLERIES &amp; MEMORIES</span>
-            <h3>Explore Ceremony Photos &amp; More</h3>
-            <p>
-              Browse Pellikoduku, Pellikuthuru, Haldi Snanam, Mehendi, Sangeeth, and sacred Muhurtham ceremonies.
-            </p>
-          </div>
-          <button
-            type="button"
-            className="gold-button cta-gallery-btn"
-            onClick={onNavigateToGallery}
-          >
-            📸 View Full Gallery →
-          </button>
-        </div>
       </div>
 
       {/* EXTENDED FULL REEL LIGHTBOX MODAL */}
       {expandedVideo && (
         <div
           className="hvs-expand-modal-backdrop"
-          onClick={handleBackdropClick}
+          onClick={handleCloseModal}
           role="dialog"
           aria-modal="true"
           aria-label={`Extended view of ${expandedVideo.title}`}
@@ -581,7 +570,7 @@ function HomeVideoSection({ onNavigateToGallery, onPauseMusic, onResumeMusic }) 
             <button
               type="button"
               className="hvs-modal-back-btn"
-              onClick={() => setShowExitConfirm(true)}
+              onClick={handleCloseModal}
               aria-label="Return to wedding invitation"
             >
               ← Back to Invitation
@@ -594,7 +583,7 @@ function HomeVideoSection({ onNavigateToGallery, onPauseMusic, onResumeMusic }) 
             <button
               type="button"
               className="hvs-modal-close-btn"
-              onClick={() => setShowExitConfirm(true)}
+              onClick={handleCloseModal}
               aria-label="Close video reel"
               title="Close"
             >
@@ -661,45 +650,6 @@ function HomeVideoSection({ onNavigateToGallery, onPauseMusic, onResumeMusic }) 
               <h3 className="hvs-modal-title">{expandedVideo.title}</h3>
               <p className="hvs-modal-telugu">{expandedVideo.teluguTitle}</p>
             </div>
-
-            {/* INTELLIGENT CONFIRMATION DIALOG (Protects against accidental dismissals on empty space) */}
-            {showExitConfirm && (
-              <div
-                className="hvs-confirm-overlay"
-                onClick={(e) => e.stopPropagation()}
-                role="alertdialog"
-                aria-modal="true"
-                aria-labelledby="hvs-confirm-title"
-              >
-                <div className="hvs-confirm-card">
-                  <div className="hvs-confirm-icon" aria-hidden="true">🎬</div>
-                  <h4 id="hvs-confirm-title" className="hvs-confirm-title">
-                    Return to Wedding Invitation?
-                  </h4>
-                  <p className="hvs-confirm-telugu">వెడ్డింగ్ ఆహ్వానానికి తిరిగి వెళ్ళాలా?</p>
-                  <p className="hvs-confirm-desc">
-                    You are currently watching <strong>"{expandedVideo.title}"</strong>.
-                    Would you like to continue watching this reel, or return to the website?
-                  </p>
-                  <div className="hvs-confirm-actions">
-                    <button
-                      type="button"
-                      className="gold-button hvs-confirm-btn-stay"
-                      onClick={handleCancelExit}
-                    >
-                      ▶ Keep Watching Reel
-                    </button>
-                    <button
-                      type="button"
-                      className="hvs-confirm-btn-exit"
-                      onClick={handleConfirmExit}
-                    >
-                      ✕ Yes, Return to Website
-                    </button>
-                  </div>
-                </div>
-              </div>
-            )}
           </div>
         </div>
       )}
