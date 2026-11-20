@@ -198,7 +198,7 @@ function Gallery({ onPauseMusic }) {
   const youtubeLiveConfig = (
     import.meta.env.VITE_YOUTUBE_LIVE_URL ||
     import.meta.env.VITE_YOUTUBE_LIVE_ID ||
-    ''
+    'https://youtu.be/osMXReitz0I?si=Z-F0c7ygR9NUKFbd'
   ).trim();
 
   const liveVideoId = useMemo(() => parseYouTubeVideoId(youtubeLiveConfig), [youtubeLiveConfig]);
