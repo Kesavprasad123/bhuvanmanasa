@@ -45,7 +45,7 @@ function MainInvitation({
         onResumeMusic={onResumeMusic}
       />
       <FeatureImage />
-      <Gallery />
+      <Gallery onPauseMusic={onPauseMusic} />
       <Venue />
       <FinalSection />
       <Footer />

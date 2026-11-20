@@ -157,7 +157,7 @@ function FloatingNav({
         <a href="#home" onClick={handleNavClick}>శుభారంభం</a>
         <a href="#story" onClick={handleNavClick}>వధూవరులు</a>
         <a href="#events" onClick={handleNavClick}>శుభకార్యాలు</a>
-        <a href={galleryHref} onClick={handleGalleryClick}>చిత్రమాలిక &amp; వీడియోలు</a>
+        <a href="#celebration" onClick={handleNavClick}>🔴 ప్రత్యక్ష ప్రసారం (Live)</a>
         <a href="#venue" onClick={handleNavClick}>కళ్యాణ వేదిక</a>
         <a href={accommodationHref} onClick={handleAccommodationClick}>విడిది ఇల్లు</a>
       </div>

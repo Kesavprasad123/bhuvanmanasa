@@ -11,8 +11,9 @@ const MainInvitation = lazy(loadMainInvitation);
 const loadAccommodation = () => import('./components/Accommodation');
 const Accommodation = lazy(loadAccommodation);
 
-const loadGallery = () => import('./components/GalleryPage');
-const GalleryPage = lazy(loadGallery);
+// Wedding Gallery & Videos subpage commented out per user request
+// const loadGallery = () => import('./components/GalleryPage');
+// const GalleryPage = lazy(loadGallery);
 
 const getStoredTheme = () => {
   try {
@@ -25,13 +26,12 @@ const getStoredTheme = () => {
 function getInitialRoute(initialPath) {
   if (initialPath) return initialPath;
   if (typeof window === 'undefined') return 'home';
-  if (/\/gallery(?:\/|$)/i.test(window.location.pathname)) return 'gallery';
   return /\/accommodation(?:\/|$)/i.test(window.location.pathname) ? 'accommodation' : 'home';
 }
 
 function App({ initialRoute = null }) {
   const [currentRoute, setCurrentRoute] = useState(() => getInitialRoute(initialRoute));
-  const isDirectSubpage = currentRoute === 'accommodation' || currentRoute === 'gallery';
+  const isDirectSubpage = currentRoute === 'accommodation';
   const [isOpen, setIsOpen] = useState(isDirectSubpage);
   const [isDark, setIsDark] = useState(getStoredTheme);
 
@@ -68,10 +68,7 @@ function App({ initialRoute = null }) {
   useEffect(() => {
     const handlePopState = () => {
       const path = window.location.pathname;
-      if (/\/gallery(?:\/|$)/i.test(path)) {
-        setCurrentRoute('gallery');
-        setIsOpen(true);
-      } else if (/\/accommodation(?:\/|$)/i.test(path)) {
+      if (/\/accommodation(?:\/|$)/i.test(path)) {
         setCurrentRoute('accommodation');
         setIsOpen(true);
       } else {
@@ -89,7 +86,7 @@ function App({ initialRoute = null }) {
 
   // Unlock body scroll when site is revealed or on subpages
   useEffect(() => {
-    if (isOpen || currentRoute === 'accommodation' || currentRoute === 'gallery') {
+    if (isOpen || currentRoute === 'accommodation') {
       document.body.classList.remove('locked');
     } else {
       document.body.classList.add('locked');
@@ -118,7 +115,6 @@ function App({ initialRoute = null }) {
     const idleCallback = window.requestIdleCallback || ((cb) => setTimeout(cb, 2500));
     const id = idleCallback(() => {
       loadAccommodation();
-      loadGallery();
     });
     return () => (window.cancelIdleCallback ? window.cancelIdleCallback(id) : null);
   }, [isOpen]);
@@ -158,14 +154,20 @@ function App({ initialRoute = null }) {
   }, []);
 
   const navigateToGallery = useCallback(() => {
-    const target = getGalleryHref();
-    if (window.location.pathname !== target) {
-      window.history.pushState(null, '', target);
+    // Gallery subpage disabled per user request: smooth scroll to YouTube Live under Our Celebration
+    if (currentRoute !== 'home') {
+      const target = getHomeHref();
+      if (window.location.pathname !== target) {
+        window.history.pushState(null, '', target);
+      }
+      setCurrentRoute('home');
+      setIsOpen(true);
     }
-    setCurrentRoute('gallery');
-    setIsOpen(true);
-    window.scrollTo(0, 0);
-  }, []);
+    setTimeout(() => {
+      const el = document.getElementById('celebration') || document.getElementById('gallery');
+      if (el) el.scrollIntoView({ behavior: 'smooth' });
+    }, 120);
+  }, [currentRoute]);
 
   const navigateToHome = useCallback(() => {
     const target = getHomeHref();
@@ -189,20 +191,8 @@ function App({ initialRoute = null }) {
         preload="none"
       />
 
-      {currentRoute === 'gallery' ? (
-        <Suspense fallback={<div style={{ minHeight: '100vh', background: '#fbf3e9' }} />}>
-          <GalleryPage
-            musicPlaying={musicPlaying}
-            onToggleMusic={toggleMusic}
-            isDark={isDark}
-            onToggleTheme={toggleTheme}
-            onBackToInvitation={navigateToHome}
-            onNavigateToAccommodation={navigateToAccommodation}
-            onPauseMusic={pauseMusic}
-            onResumeMusic={resumeMusic}
-          />
-        </Suspense>
-      ) : currentRoute === 'accommodation' ? (
+      {/* Wedding Gallery & Videos subpage disabled per user request */}
+      {currentRoute === 'accommodation' ? (
         <Suspense
           fallback={
             <div
