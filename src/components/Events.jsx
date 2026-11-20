@@ -245,14 +245,12 @@ function Events() {
     return dist < 1 ? `${(dist * 1000).toFixed(0)} m` : `${dist.toFixed(1)} km`;
   };
 
-  // Fluid circular stage card position logic (seamless 60fps hardware transitions)
+  // Strict 3-Card Stage Model: exactly 1 active center card, 1 previous card on left, 1 next card on right.
+  // All other cards are strictly off-stage (guarantees exactly 3 cards on screen, never 5).
   const getCardStatus = (index) => {
-    const diff = (index - activeIndex + total) % total;
-    if (diff === 0) return 'is-active';
-    if (diff === 1) return 'is-next';
-    if (diff === total - 1) return 'is-prev';
-    if (diff === 2) return 'is-far-next';
-    if (diff === total - 2) return 'is-far-prev';
+    if (index === activeIndex) return 'is-active';
+    if (index === (activeIndex - 1 + total) % total) return 'is-prev';
+    if (index === (activeIndex + 1) % total) return 'is-next';
     return 'is-offstage';
   };
 
@@ -331,6 +329,17 @@ function Events() {
               const isNext = status === 'is-next';
               const isFlipped = !!flippedCards[index];
               const distance = getDistance(event.coordinates);
+
+              // Off-stage cards are strictly hidden and empty to prevent any extra cards from rendering
+              if (status === 'is-offstage') {
+                return (
+                  <article
+                    key={event.number}
+                    className="stage-card is-offstage"
+                    aria-hidden="true"
+                  />
+                );
+              }
 
               return (
                 <article

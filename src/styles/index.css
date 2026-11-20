@@ -1175,69 +1175,57 @@
       visibility 0.7s ease;
   }
 
-  /* Center Active Card: Perfectly upright, zero tilt, bold luxury gold frame */
+  /* Center Active Card: Perfectly front and center, majestic gold illumination, bold depth */
   .stage-card.is-active {
-    transform: translate(-50%, -50%) scale(1.02);
+    transform: translate(-50%, -50%) translateZ(40px) scale(1.03);
     z-index: 10;
     opacity: 1;
     cursor: default;
-    border: 2px solid rgba(220, 185, 115, 0.92);
-    box-shadow: 0 24px 60px rgba(65, 38, 29, 0.28), 0 0 35px rgba(220, 185, 115, 0.28);
+    border: 2px solid rgba(220, 185, 115, 0.95);
+    box-shadow: 0 28px 75px rgba(45, 15, 25, 0.36), 0 0 45px rgba(220, 185, 115, 0.35);
   }
 
-  /* Active card on hover: Subtle gold glow, NO scale jump, zero cursor jitter */
+  /* Active card on hover: Enhanced royal gold glow, perfectly stable */
   .stage-card.is-active:hover {
     border-color: #ffd875;
-    box-shadow: 0 28px 70px rgba(65, 38, 29, 0.35), 0 0 45px rgba(220, 185, 115, 0.38);
+    box-shadow: 0 32px 85px rgba(45, 15, 25, 0.42), 0 0 55px rgba(220, 185, 115, 0.45);
   }
 
-  /* Left Adjacent Card: Planar position, zero rotateY, stable on hover (no filter to preserve 3D on Android) */
+  /* Left Adjacent Card: Elegant 3D perspective angle facing inward toward center, smooth depth */
   .stage-card.is-prev {
-    transform: translate(calc(-50% - 330px), -50%) scale(0.88);
+    transform: translate(calc(-50% - 335px), -50%) translateZ(-20px) rotateY(10deg) scale(0.88);
     z-index: 5;
-    opacity: 0.6;
+    opacity: 0.65;
   }
 
   .stage-card.is-prev:hover {
-    opacity: 0.88;
-    transform: translate(calc(-50% - 330px), -50%) scale(0.9);
+    opacity: 0.92;
+    transform: translate(calc(-50% - 335px), -50%) translateZ(-5px) rotateY(6deg) scale(0.91);
+    box-shadow: 0 20px 50px rgba(45, 15, 25, 0.32);
   }
 
-  /* Right Adjacent Card: Planar position, zero rotateY, stable on hover (no filter to preserve 3D on Android) */
+  /* Right Adjacent Card: Symmetrical 3D perspective angle facing inward toward center, smooth depth */
   .stage-card.is-next {
-    transform: translate(calc(-50% + 330px), -50%) scale(0.88);
+    transform: translate(calc(-50% + 335px), -50%) translateZ(-20px) rotateY(-10deg) scale(0.88);
     z-index: 5;
-    opacity: 0.6;
+    opacity: 0.65;
   }
 
   .stage-card.is-next:hover {
-    opacity: 0.88;
-    transform: translate(calc(-50% + 330px), -50%) scale(0.9);
+    opacity: 0.92;
+    transform: translate(calc(-50% + 335px), -50%) translateZ(-5px) rotateY(-6deg) scale(0.91);
+    box-shadow: 0 20px 50px rgba(45, 15, 25, 0.32);
   }
 
-  /* Smooth Buffer & Off-stage Cards: fluid sliding without display:none snapping */
-  .stage-card.is-far-prev {
-    transform: translate(calc(-50% - 540px), -50%) scale(0.76);
-    z-index: 2;
-    opacity: 0;
-    pointer-events: none;
-    visibility: hidden;
-  }
-
+  /* Off-stage Cards: Strictly 3 cards are ever shown; all other 4 cards are completely hidden */
+  .stage-card.is-offstage,
+  .stage-card.is-far-prev,
   .stage-card.is-far-next {
-    transform: translate(calc(-50% + 540px), -50%) scale(0.76);
-    z-index: 2;
-    opacity: 0;
-    pointer-events: none;
-    visibility: hidden;
-  }
-
-  .stage-card.is-offstage {
-    transform: translate(-50%, -50%) scale(0.65);
-    z-index: 1;
-    opacity: 0;
-    pointer-events: none;
-    visibility: hidden;
+    display: none !important;
+    opacity: 0 !important;
+    visibility: hidden !important;
+    pointer-events: none !important;
+    transform: translate(-50%, -50%) scale(0.6) !important;
   }
 
   /* Card Overlays & Content */
@@ -1724,19 +1712,23 @@
     }
 
     .stage-card.is-prev {
-      transform: translate(calc(-50% - 260px), -50%) scale(0.86);
+      transform: translate(calc(-50% - 250px), -50%) translateZ(-15px) rotateY(8deg) scale(0.86);
+      opacity: 0.62;
     }
 
     .stage-card.is-prev:hover {
-      transform: translate(calc(-50% - 260px), -50%) scale(0.88);
+      transform: translate(calc(-50% - 250px), -50%) translateZ(-5px) rotateY(4deg) scale(0.88);
+      opacity: 0.88;
     }
 
     .stage-card.is-next {
-      transform: translate(calc(-50% + 260px), -50%) scale(0.86);
+      transform: translate(calc(-50% + 250px), -50%) translateZ(-15px) rotateY(-8deg) scale(0.86);
+      opacity: 0.62;
     }
 
     .stage-card.is-next:hover {
-      transform: translate(calc(-50% + 260px), -50%) scale(0.88);
+      transform: translate(calc(-50% + 250px), -50%) translateZ(-5px) rotateY(-4deg) scale(0.88);
+      opacity: 0.88;
     }
 
     .events-nav-chevron.prev,
@@ -1777,27 +1769,22 @@
     }
 
     .stage-card.is-prev {
-      transform: translate(calc(-50% - 76vw), -50%) scale(0.82);
+      transform: translate(calc(-50% - 76vw), -50%) scale(0.82) rotateY(6deg);
       opacity: 0.35;
     }
 
     .stage-card.is-next {
-      transform: translate(calc(-50% + 76vw), -50%) scale(0.82);
+      transform: translate(calc(-50% + 76vw), -50%) scale(0.82) rotateY(-6deg);
       opacity: 0.35;
     }
 
-    .stage-card.is-far-prev {
-      transform: translate(calc(-50% - 110vw), -50%) scale(0.72);
-      opacity: 0;
-      visibility: hidden;
-      pointer-events: none;
-    }
-
+    .stage-card.is-offstage,
+    .stage-card.is-far-prev,
     .stage-card.is-far-next {
-      transform: translate(calc(-50% + 110vw), -50%) scale(0.72);
-      opacity: 0;
-      visibility: hidden;
-      pointer-events: none;
+      display: none !important;
+      opacity: 0 !important;
+      visibility: hidden !important;
+      pointer-events: none !important;
     }
 
     .side-card-hint {
@@ -3965,11 +3952,11 @@
     }
 
     .stage-card.is-prev {
-      transform: translate(calc(-50% - 360px), -50%) scale(0.88);
+      transform: translate(calc(-50% - 370px), -50%) translateZ(-25px) rotateY(10deg) scale(0.88);
     }
 
     .stage-card.is-next {
-      transform: translate(calc(-50% + 360px), -50%) scale(0.88);
+      transform: translate(calc(-50% + 370px), -50%) translateZ(-25px) rotateY(-10deg) scale(0.88);
     }
 
     .photo-collage {
@@ -4037,11 +4024,11 @@
     }
 
     .stage-card.is-prev {
-      transform: translate(calc(-50% - 430px), -50%) scale(0.88);
+      transform: translate(calc(-50% - 440px), -50%) translateZ(-30px) rotateY(10deg) scale(0.88);
     }
 
     .stage-card.is-next {
-      transform: translate(calc(-50% + 430px), -50%) scale(0.88);
+      transform: translate(calc(-50% + 440px), -50%) translateZ(-30px) rotateY(-10deg) scale(0.88);
     }
 
     .stage-card-title {
