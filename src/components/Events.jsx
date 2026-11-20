@@ -99,6 +99,7 @@ const EVENTS = [
     time: '8:26 PM (Muhurtham)',
     date: '12 December 2026',
     venue: 'SVPC CONVENTIONS',
+    dinnerNote: 'Followed by Dinner @7pm',
     color: '#8e3045',
     mapUrl: 'https://maps.app.goo.gl/s6EFpBAJ4UScq46k6?g_st=iw',
     coordinates: { lat: 17.0387557, lng: 81.8332866 },
@@ -388,6 +389,12 @@ function Events() {
                           <div className="meta-text">
                             <small>VENUE</small>
                             <strong>{event.venue}</strong>
+                            {event.dinnerNote && (
+                              <span className="venue-dinner-note">
+                                <span className="dinner-icon" aria-hidden="true">🍽️</span>
+                                {event.dinnerNote}
+                              </span>
+                            )}
                           </div>
                         </div>
                       </div>
@@ -415,6 +422,11 @@ function Events() {
                         <span className="back-event-badge">EVENT {event.number} / 07</span>
                         <h4 className="back-title">{event.title}</h4>
                         <p className="back-venue">{event.venue}</p>
+                        {event.dinnerNote && (
+                          <p className="back-dinner-note">
+                            <span aria-hidden="true">🍽️</span> {event.dinnerNote}
+                          </p>
+                        )}
                       </div>
 
                       {/* Embedded Google Map */}
