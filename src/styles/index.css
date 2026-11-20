@@ -1122,11 +1122,25 @@
   .card-front {
     background-size: cover;
     background-position: center;
+    position: relative;
+    overflow: hidden;
     z-index: 2;
     transform: rotateY(0deg);
     opacity: 1;
     visibility: visible;
     pointer-events: auto;
+  }
+
+  .stage-card-bg-img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    z-index: 0;
+    pointer-events: none;
+    user-select: none;
+    -webkit-user-drag: none;
   }
 
   .card-back {

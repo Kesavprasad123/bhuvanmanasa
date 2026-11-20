@@ -9,7 +9,17 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 
 const BASE = import.meta.env.BASE_URL || './';
 const cleanBase = BASE.endsWith('/') ? BASE : `${BASE}/`;
-const asset = (p) => `${cleanBase}${p.replace(/^\/+/, '')}`;
+const asset = (p) => {
+  const clean = p.replace(/^\/+/, '');
+  if (typeof window !== 'undefined' && window.location?.origin) {
+    try {
+      return new URL(clean, new URL(cleanBase, window.location.origin)).href;
+    } catch {
+      return `${window.location.origin}/${clean}`;
+    }
+  }
+  return `${cleanBase}${clean}`;
+};
 
 const EVENTS = [
   {
@@ -178,6 +188,14 @@ function Events() {
     }
   }, []);
 
+  // Preload all 7 event ceremony photos in memory for instant 0ms rendering
+  useEffect(() => {
+    EVENTS.forEach((ev) => {
+      const img = new Image();
+      img.src = ev.image;
+    });
+  }, []);
+
   // Touch Swipe Handlers for mobile (respects vertical page scrolling)
   const handleTouchStart = (e) => {
     touchStartXRef.current = e.touches[0].clientX;
@@ -330,17 +348,6 @@ function Events() {
               const isFlipped = !!flippedCards[index];
               const distance = getDistance(event.coordinates);
 
-              // Off-stage cards are strictly hidden and empty to prevent any extra cards from rendering
-              if (status === 'is-offstage') {
-                return (
-                  <article
-                    key={event.number}
-                    className="stage-card is-offstage"
-                    aria-hidden="true"
-                  />
-                );
-              }
-
               return (
                 <article
                   key={event.number}
@@ -358,8 +365,23 @@ function Events() {
                   {/* ===== FRONT FACE ===== */}
                   <div
                     className="card-face card-front"
-                    style={{ backgroundImage: `url('${event.image}')` }}
+                    style={{
+                      backgroundImage: `url('${event.image}')`,
+                      backgroundColor: '#26121b',
+                    }}
                   >
+                    {/* Dedicated eager image tag for high-priority browser decoding */}
+                    <img
+                      src={event.image}
+                      alt={`${event.title} - ${event.teluguTitle}`}
+                      className="stage-card-bg-img"
+                      loading="eager"
+                      decoding="async"
+                      draggable="false"
+                      width="370"
+                      height="550"
+                    />
+
                     {/* Gradient Overlay */}
                     <div className="stage-card-overlay"></div>
 
