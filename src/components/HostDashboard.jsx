@@ -12,6 +12,7 @@ import {
   removeEmptyEntries,
   saveTrackerEntry,
   subscribeToDatabaseChanges,
+  syncFromCloud,
   toggleEntryStatus,
 } from '../data/bookingStore.js';
 import { AdminPasscodeDialog, ConfirmDialog } from './BookingControls.jsx';
@@ -105,9 +106,19 @@ export default function HostDashboard({
   }, []);
 
   useEffect(() => {
-    // Purge any empty, incomplete, or placeholder entries immediately on mount
+    // Purge any empty, incomplete, or corrupted entries immediately on mount
     removeEmptyEntries().catch(() => {});
     loadEntries();
+
+    // Fetch live entries from Supabase cloud if configured
+    syncFromCloud()
+      .then((cloudData) => {
+        if (cloudData && cloudData.length > 0) {
+          setEntries(cloudData.filter(isEntryValid));
+        }
+      })
+      .catch(() => {});
+
     const unsub = subscribeToDatabaseChanges(() => {
       loadEntries();
     });
@@ -134,21 +145,14 @@ export default function HostDashboard({
         return false;
       }
 
-      // Vacant entries are strictly hidden from both Host and Guests. Only Admin can view all entries (including vacant)!
-      if (!isAdmin && item.status !== 'occupied') {
-        return false;
-      }
-
       // Location filter
       if (activePropertyId !== 'all' && item.propertyId !== activePropertyId) {
         return false;
       }
 
-      // Status filter (for Admin only)
-      if (isAdmin) {
-        if (statusFilter === 'occupied' && item.status !== 'occupied') return false;
-        if (statusFilter === 'vacant' && item.status !== 'vacant') return false;
-      }
+      // Status filter
+      if (statusFilter === 'occupied' && item.status !== 'occupied') return false;
+      if (statusFilter === 'vacant' && item.status !== 'vacant') return false;
 
       // Search query
       if (query) {
@@ -159,7 +163,7 @@ export default function HostDashboard({
       }
       return true;
     });
-  }, [entries, activePropertyId, statusFilter, searchQuery, isHost, isAdmin]);
+  }, [entries, activePropertyId, statusFilter, searchQuery, isHost]);
 
   // Reset form
   const resetForm = () => {
@@ -689,8 +693,8 @@ export default function HostDashboard({
             </p>
           </div>
 
-          {/* Filter Pills - Admin has full status tabs; Host views active occupied rooms */}
-          {isAdmin ? (
+          {/* Filter Pills - Host & Admin have full status filters; Guests can filter between Allocated and Available */}
+          {isHost ? (
             <div className="acc-filter-pills" role="group" aria-label="Filter status">
               <button
                 type="button"
@@ -713,7 +717,7 @@ export default function HostDashboard({
               >
                 🟢 Vacant ({stats.totalVacant})
               </button>
-              {statusFilter === 'vacant' && stats.totalVacant > 0 && (
+              {isAdmin && statusFilter === 'vacant' && stats.totalVacant > 0 && (
                 <button
                   type="button"
                   className="acc-filter-pill acc-clear-vacant-btn"
@@ -728,27 +732,49 @@ export default function HostDashboard({
                   🗑️ Clear All Vacant ({stats.totalVacant})
                 </button>
               )}
+              {isAdmin && (
+                <button
+                  type="button"
+                  className="acc-filter-pill"
+                  onClick={handleRemoveEmptyEntries}
+                  title="Remove any empty or incomplete entries from the tracker"
+                  style={{
+                    background: 'rgba(239, 68, 68, 0.12)',
+                    borderColor: 'rgba(239, 68, 68, 0.3)',
+                    color: '#fca5a5',
+                  }}
+                >
+                  🧹 Remove Empty Entries
+                </button>
+              )}
+            </div>
+          ) : (
+            <div className="acc-filter-pills" role="group" aria-label="Filter status">
               <button
                 type="button"
-                className="acc-filter-pill"
-                onClick={handleRemoveEmptyEntries}
-                title="Remove any empty or incomplete entries from the tracker"
-                style={{
-                  background: 'rgba(239, 68, 68, 0.12)',
-                  borderColor: 'rgba(239, 68, 68, 0.3)',
-                  color: '#fca5a5',
-                }}
+                className={`acc-filter-pill${statusFilter === 'all' ? ' is-active' : ''}`}
+                onClick={() => setStatusFilter('all')}
               >
-                🧹 Remove Empty Entries
+                All ({entries.length})
               </button>
+              <button
+                type="button"
+                className={`acc-filter-pill is-occupied${statusFilter === 'occupied' ? ' is-active' : ''}`}
+                onClick={() => setStatusFilter('occupied')}
+              >
+                🔴 Allocated ({stats.totalOccupied})
+              </button>
+              {stats.totalVacant > 0 && (
+                <button
+                  type="button"
+                  className={`acc-filter-pill is-available${statusFilter === 'vacant' ? ' is-active' : ''}`}
+                  onClick={() => setStatusFilter('vacant')}
+                >
+                  🟢 Available ({stats.totalVacant})
+                </button>
+              )}
             </div>
-          ) : isHost ? (
-            <div className="acc-filter-pills" role="group" aria-label="Filter status">
-              <span className="acc-filter-pill is-occupied is-active">
-                🔴 Active Occupied ({filteredEntries.length})
-              </span>
-            </div>
-          ) : null}
+          )}
         </div>
 
         {/* Search Bar */}

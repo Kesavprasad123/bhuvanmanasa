@@ -99,6 +99,7 @@ const EVENTS = [
     time: '8:26 PM (Muhurtham)',
     date: '12 December 2026',
     venue: 'SVPC CONVENTIONS',
+    dinnerNote: 'Followed by Dinner @7pm',
     color: '#8e3045',
     mapUrl: 'https://maps.app.goo.gl/s6EFpBAJ4UScq46k6?g_st=iw',
     coordinates: { lat: 17.0387557, lng: 81.8332866 },
@@ -244,14 +245,12 @@ function Events() {
     return dist < 1 ? `${(dist * 1000).toFixed(0)} m` : `${dist.toFixed(1)} km`;
   };
 
-  // Fluid circular stage card position logic (seamless 60fps hardware transitions)
+  // Strict 3-Card Stage Model: exactly 1 active center card, 1 previous card on left, 1 next card on right.
+  // All other cards are strictly off-stage (guarantees exactly 3 cards on screen, never 5).
   const getCardStatus = (index) => {
-    const diff = (index - activeIndex + total) % total;
-    if (diff === 0) return 'is-active';
-    if (diff === 1) return 'is-next';
-    if (diff === total - 1) return 'is-prev';
-    if (diff === 2) return 'is-far-next';
-    if (diff === total - 2) return 'is-far-prev';
+    if (index === activeIndex) return 'is-active';
+    if (index === (activeIndex - 1 + total) % total) return 'is-prev';
+    if (index === (activeIndex + 1) % total) return 'is-next';
     return 'is-offstage';
   };
 
@@ -331,6 +330,17 @@ function Events() {
               const isFlipped = !!flippedCards[index];
               const distance = getDistance(event.coordinates);
 
+              // Off-stage cards are strictly hidden and empty to prevent any extra cards from rendering
+              if (status === 'is-offstage') {
+                return (
+                  <article
+                    key={event.number}
+                    className="stage-card is-offstage"
+                    aria-hidden="true"
+                  />
+                );
+              }
+
               return (
                 <article
                   key={event.number}
@@ -388,6 +398,12 @@ function Events() {
                           <div className="meta-text">
                             <small>VENUE</small>
                             <strong>{event.venue}</strong>
+                            {event.dinnerNote && (
+                              <span className="venue-dinner-note">
+                                <span className="dinner-icon" aria-hidden="true">🍽️</span>
+                                {event.dinnerNote}
+                              </span>
+                            )}
                           </div>
                         </div>
                       </div>
@@ -415,6 +431,11 @@ function Events() {
                         <span className="back-event-badge">EVENT {event.number} / 07</span>
                         <h4 className="back-title">{event.title}</h4>
                         <p className="back-venue">{event.venue}</p>
+                        {event.dinnerNote && (
+                          <p className="back-dinner-note">
+                            <span aria-hidden="true">🍽️</span> {event.dinnerNote}
+                          </p>
+                        )}
                       </div>
 
                       {/* Embedded Google Map */}

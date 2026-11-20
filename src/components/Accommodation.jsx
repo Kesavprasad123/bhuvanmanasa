@@ -324,7 +324,8 @@ function Accommodation({
         </a>
 
         <div className="acc-topbar-actions">
-          {onNavigateToGallery && (
+          {/* Gallery subpage link commented out per user request */}
+          {/* {onNavigateToGallery && (
             <button
               type="button"
               className="acc-host-link"
@@ -332,7 +333,7 @@ function Accommodation({
             >
               🎥 చిత్రమాలిక &amp; వీడియోలు
             </button>
-          )}
+          )} */}
 
           {!isHost ? (
             <button
