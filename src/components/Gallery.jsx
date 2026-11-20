@@ -1,8 +1,18 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 
-const BASE = import.meta.env.BASE_URL || './';
+const BASE = import.meta.env.BASE_URL || '/';
 const cleanBase = BASE.endsWith('/') ? BASE : `${BASE}/`;
-const asset = (p) => `${cleanBase}${p.replace(/^\/+/, '')}`;
+const asset = (p) => {
+  const clean = p.replace(/^\/+/, '');
+  if (typeof window !== 'undefined' && window.location?.origin) {
+    try {
+      return new URL(clean, new URL(cleanBase, window.location.origin)).href;
+    } catch {
+      return `${window.location.origin}/${clean}`;
+    }
+  }
+  return `/${clean}`;
+};
 
 /**
  * Parses any YouTube link into a clean 11-character video ID.

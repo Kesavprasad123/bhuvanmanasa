@@ -31,7 +31,7 @@ export default defineConfig({
       },
     },
   ],
-  base: './',
+  base: '/',
   build: {
     outDir: 'dist',
     target: 'es2020',

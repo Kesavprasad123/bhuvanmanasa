@@ -1,8 +1,18 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 
-const BASE = import.meta.env.BASE_URL || './';
+const BASE = import.meta.env.BASE_URL || '/';
 const cleanBase = BASE.endsWith('/') ? BASE : `${BASE}/`;
-const asset = (p) => `${cleanBase}${p.replace(/^\/+/, '')}`;
+const asset = (p) => {
+  const clean = p.replace(/^\/+/, '');
+  if (typeof window !== 'undefined' && window.location?.origin) {
+    try {
+      return new URL(clean, new URL(cleanBase, window.location.origin)).href;
+    } catch {
+      return `${window.location.origin}/${clean}`;
+    }
+  }
+  return `/${clean}`;
+};
 
 /**
  * Downloads a video reel directly to user device with fallback.
@@ -232,7 +242,7 @@ function ReelCard({
       <div className="hvs-reel-frame" onClick={handleTogglePlay}>
         <video
           ref={videoRef}
-          src={isSectionInView ? video.src : undefined}
+          src={video.src}
           poster={video.poster}
           playsInline
           webkit-playsinline="true"

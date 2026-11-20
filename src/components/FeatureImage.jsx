@@ -1,6 +1,9 @@
-const BASE = import.meta.env.BASE_URL || './';
+const BASE = import.meta.env.BASE_URL || '/';
 const cleanBase = BASE.endsWith('/') ? BASE : `${BASE}/`;
-const featureImgSrc = `${cleanBase}assets/feature-img.webp`;
+const featureImgSrc =
+  typeof window !== 'undefined' && window.location?.origin
+    ? `${window.location.origin}/assets/feature-img.webp`
+    : `${cleanBase}assets/feature-img.webp`;
 
 function FeatureImage() {
   return (
