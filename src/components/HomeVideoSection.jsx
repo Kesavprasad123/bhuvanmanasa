@@ -4,6 +4,46 @@ const BASE = import.meta.env.BASE_URL || './';
 const cleanBase = BASE.endsWith('/') ? BASE : `${BASE}/`;
 const asset = (p) => `${cleanBase}${p.replace(/^\/+/, '')}`;
 
+/**
+ * Downloads a video reel directly to user device with fallback.
+ */
+export async function downloadReelVideo(video, onStateChange) {
+  if (onStateChange) onStateChange(true);
+  try {
+    const rawTitle = video.title || 'Wedding_Reel';
+    const safeTitle = rawTitle.replace(/[^a-zA-Z0-9_-]/g, '_');
+    const filename = `${safeTitle}.mp4`;
+
+    const response = await fetch(video.src);
+    if (!response.ok) throw new Error('Network response not ok');
+    const blob = await response.blob();
+    const blobUrl = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = blobUrl;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(blobUrl), 20000);
+  } catch {
+    const rawTitle = video.title || 'Wedding_Reel';
+    const safeTitle = rawTitle.replace(/[^a-zA-Z0-9_-]/g, '_');
+    const filename = `${safeTitle}.mp4`;
+    const a = document.createElement('a');
+    a.href = video.src;
+    a.download = filename;
+    a.target = '_blank';
+    a.rel = 'noopener noreferrer';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  } finally {
+    if (onStateChange) {
+      setTimeout(() => onStateChange(false), 1200);
+    }
+  }
+}
+
 const REEL_VIDEOS = [
   {
     id: 'groom-first',
@@ -82,6 +122,13 @@ function ReelCard({
   const videoRef = useRef(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [progress, setProgress] = useState(0);
+  const [isDownloading, setIsDownloading] = useState(false);
+
+  const handleDownloadClick = async (e) => {
+    e.stopPropagation();
+    if (isDownloading) return;
+    await downloadReelVideo(video, setIsDownloading);
+  };
 
   // Set Android-compatible autoplay attributes on DOM mount
   useEffect(() => {
@@ -222,30 +269,50 @@ function ReelCard({
             {video.badge}
           </span>
 
-          {/* Sound Toggle Pill Button */}
-          <button
-            type="button"
-            className={`hvs-sound-pill${isUnmuted ? ' is-unmuted' : ''}`}
-            onClick={handleSoundClick}
-            aria-label={isUnmuted ? `Mute ${video.title}` : `Unmute ${video.title} for sound`}
-            title={isUnmuted ? 'Mute' : 'Unmute for video sound'}
-          >
-            {isUnmuted ? (
-              <>
-                <span className="hvs-sound-waves" aria-hidden="true">
-                  <span className="wave wave-1" />
-                  <span className="wave wave-2" />
-                  <span className="wave wave-3" />
-                </span>
-                <span className="hvs-sound-label">Sound ON</span>
-              </>
-            ) : (
-              <>
-                <span className="hvs-sound-icon" aria-hidden="true">🔇</span>
-                <span className="hvs-sound-label">Tap for Sound</span>
-              </>
-            )}
-          </button>
+          <div className="hvs-reel-top-actions">
+            {/* Download Pill Button */}
+            <button
+              type="button"
+              className={`hvs-download-pill${isDownloading ? ' is-downloading' : ''}`}
+              onClick={handleDownloadClick}
+              aria-label={`Download ${video.title} reel`}
+              title="Download Reel Video"
+            >
+              <span className="hvs-download-icon" aria-hidden="true">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                  <polyline points="7 10 12 15 17 10" />
+                  <line x1="12" y1="15" x2="12" y2="3" />
+                </svg>
+              </span>
+              <span className="hvs-download-label">{isDownloading ? 'Saving…' : 'Download'}</span>
+            </button>
+
+            {/* Sound Toggle Pill Button */}
+            <button
+              type="button"
+              className={`hvs-sound-pill${isUnmuted ? ' is-unmuted' : ''}`}
+              onClick={handleSoundClick}
+              aria-label={isUnmuted ? `Mute ${video.title}` : `Unmute ${video.title} for sound`}
+              title={isUnmuted ? 'Mute' : 'Unmute for video sound'}
+            >
+              {isUnmuted ? (
+                <>
+                  <span className="hvs-sound-waves" aria-hidden="true">
+                    <span className="wave wave-1" />
+                    <span className="wave wave-2" />
+                    <span className="wave wave-3" />
+                  </span>
+                  <span className="hvs-sound-label">Sound ON</span>
+                </>
+              ) : (
+                <>
+                  <span className="hvs-sound-icon" aria-hidden="true">🔇</span>
+                  <span className="hvs-sound-label">Tap for Sound</span>
+                </>
+              )}
+            </button>
+          </div>
         </div>
 
         {/* Center Pause Indicator Overlay */}
@@ -294,6 +361,22 @@ function ReelCard({
               <span className="hvs-btn-icon" aria-hidden="true">⛶</span>
               <span className="hvs-btn-text">Extend</span>
             </button>
+            <button
+              type="button"
+              className={`hvs-reel-btn hvs-download-btn${isDownloading ? ' is-downloading' : ''}`}
+              onClick={handleDownloadClick}
+              aria-label={`Download ${video.title} reel video`}
+              title="Download Reel Video"
+            >
+              <span className="hvs-btn-icon" aria-hidden="true">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                  <polyline points="7 10 12 15 17 10" />
+                  <line x1="12" y1="15" x2="12" y2="3" />
+                </svg>
+              </span>
+              <span className="hvs-btn-text">{isDownloading ? 'Saving…' : 'Save'}</span>
+            </button>
           </div>
 
           {/* Thin Progress Bar Along Bottom Edge */}
@@ -314,6 +397,7 @@ function HomeVideoSection({ onNavigateToGallery, onPauseMusic, onResumeMusic }) 
   const [expandedVideo, setExpandedVideo] = useState(null);
   const [activeReelDot, setActiveReelDot] = useState(0);
   const [isSectionInView, setIsSectionInView] = useState(false);
+  const [isModalDownloading, setIsModalDownloading] = useState(false);
   const [isMobile, setIsMobile] = useState(() => {
     if (typeof window === 'undefined') return false;
     return window.innerWidth < 768;
@@ -388,6 +472,12 @@ function HomeVideoSection({ onNavigateToGallery, onPauseMusic, onResumeMusic }) 
       onResumeMusic();
     }
   }, [onResumeMusic]);
+
+  const handleModalDownload = async (e) => {
+    e.stopPropagation();
+    if (!expandedVideo || isModalDownloading) return;
+    await downloadReelVideo(expandedVideo, setIsModalDownloading);
+  };
 
   // Lightbox Next/Prev navigation
   const handleNextExpand = useCallback(() => {
@@ -573,22 +663,39 @@ function HomeVideoSection({ onNavigateToGallery, onPauseMusic, onResumeMusic }) 
               onClick={handleCloseModal}
               aria-label="Return to wedding invitation"
             >
-              ← Back to Invitation
+              ← Back
             </button>
 
             <span className="hvs-modal-counter">
               Reel {currentReelIndex} of {REEL_VIDEOS.length}
             </span>
 
-            <button
-              type="button"
-              className="hvs-modal-close-btn"
-              onClick={handleCloseModal}
-              aria-label="Close video reel"
-              title="Close"
-            >
-              ✕
-            </button>
+            <div className="hvs-modal-actions">
+              <button
+                type="button"
+                className={`hvs-modal-download-btn${isModalDownloading ? ' is-downloading' : ''}`}
+                onClick={handleModalDownload}
+                aria-label={`Download ${expandedVideo.title} reel video`}
+                title="Download Reel Video (MP4)"
+              >
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                  <polyline points="7 10 12 15 17 10" />
+                  <line x1="12" y1="15" x2="12" y2="3" />
+                </svg>
+                <span className="hvs-modal-download-text">{isModalDownloading ? 'Saving…' : 'Download'}</span>
+              </button>
+
+              <button
+                type="button"
+                className="hvs-modal-close-btn"
+                onClick={handleCloseModal}
+                aria-label="Close video reel"
+                title="Close"
+              >
+                ✕
+              </button>
+            </div>
           </div>
 
           {/* Modal Center Content (Video Frame + Nav Arrows) */}

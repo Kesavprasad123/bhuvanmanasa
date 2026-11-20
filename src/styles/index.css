@@ -5266,3 +5266,279 @@ body.dark-theme .live-detail-item {
   background: rgba(255, 255, 255, 0.06);
   border-color: rgba(226, 185, 111, 0.2);
 }
+
+/* ==========================================================================
+   REEL DOWNLOAD CONTROLS (HomeVideoSection)
+   ========================================================================== */
+.hvs-reel-top-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.hvs-download-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 11px;
+  border-radius: 20px;
+  font-family: 'Playfair Display', serif;
+  font-size: 0.72rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  border: 1px solid rgba(255, 216, 138, 0.45);
+  background: rgba(22, 14, 18, 0.78);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  color: #ffd88a;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.4);
+}
+
+.hvs-download-pill:hover,
+.hvs-download-pill:focus-visible {
+  background: var(--gold, #d4af37);
+  color: #1a0f14;
+  border-color: #ffd88a;
+  transform: translateY(-1px);
+}
+
+.hvs-download-pill.is-downloading {
+  opacity: 0.85;
+  cursor: wait;
+}
+
+.hvs-download-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.hvs-reel-btn.hvs-download-btn {
+  background: rgba(212, 163, 89, 0.22);
+  border-color: rgba(255, 216, 138, 0.5);
+  color: #ffd88a;
+}
+
+.hvs-reel-btn.hvs-download-btn:hover,
+.hvs-reel-btn.hvs-download-btn:focus-visible {
+  background: var(--gold, #d4af37);
+  color: #1a0f14;
+  border-color: #ffd88a;
+}
+
+.hvs-modal-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.hvs-modal-download-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(212, 163, 89, 0.25);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 216, 138, 0.55);
+  color: #ffd88a;
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-family: 'Playfair Display', serif;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.hvs-modal-download-btn:hover,
+.hvs-modal-download-btn:focus-visible {
+  background: var(--gold, #d4af37);
+  color: #1a0f14;
+  border-color: #ffd88a;
+  transform: translateY(-1px);
+}
+
+.hvs-modal-download-btn.is-downloading {
+  opacity: 0.8;
+  cursor: wait;
+}
+
+/* ==========================================================================
+   PHOTO PROTECTION: ANTI-DOWNLOAD & SCREENSHOT BLOCKER (Gallery)
+   ========================================================================== */
+.photo-protect-shield {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  background: transparent;
+  user-select: none !important;
+  -webkit-user-select: none !important;
+  -webkit-touch-callout: none !important;
+  -webkit-user-drag: none !important;
+  pointer-events: auto;
+}
+
+.photo-collage .collage-item img,
+.lightbox-stage img {
+  user-select: none !important;
+  -webkit-user-select: none !important;
+  -webkit-touch-callout: none !important;
+  -webkit-user-drag: none !important;
+  pointer-events: none;
+}
+
+/* Watermark Overlay in Lightbox */
+.lightbox-watermark {
+  position: absolute;
+  bottom: 12px;
+  left: 12px;
+  right: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  z-index: 6;
+  opacity: 0.72;
+}
+
+.lightbox-watermark .watermark-text {
+  background: rgba(18, 9, 14, 0.65);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  color: rgba(255, 235, 200, 0.9);
+  border: 1px solid rgba(226, 185, 111, 0.35);
+  border-radius: 20px;
+  padding: 4px 14px;
+  font-size: 0.72rem;
+  font-family: 'Playfair Display', serif;
+  letter-spacing: 0.5px;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
+}
+
+/* Screen Capture Shield Overlay (Active on PrintScreen, hotkeys, or snipping tool blur) */
+.lightbox-stage.is-shielded img {
+  filter: blur(55px) brightness(0.18) !important;
+  opacity: 0.1 !important;
+  transform: scale(0.96);
+  transition: filter 0.15s ease, opacity 0.15s ease, transform 0.15s ease;
+}
+
+.lightbox-capture-shield {
+  position: absolute;
+  inset: 0;
+  z-index: 25;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(14, 8, 12, 0.94);
+  backdrop-filter: blur(28px);
+  -webkit-backdrop-filter: blur(28px);
+  padding: 24px;
+  text-align: center;
+  animation: captureShieldFade 0.25s ease;
+}
+
+@keyframes captureShieldFade {
+  from { opacity: 0; transform: scale(0.97); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.capture-shield-badge {
+  max-width: 440px;
+  background: rgba(28, 16, 22, 0.92);
+  border: 1.5px solid rgba(226, 185, 111, 0.6);
+  border-radius: 20px;
+  padding: 28px 24px;
+  box-shadow: 0 16px 45px rgba(0, 0, 0, 0.7);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.capture-shield-badge .shield-icon {
+  font-size: 38px;
+  line-height: 1;
+  margin-bottom: 4px;
+}
+
+.capture-shield-badge h4 {
+  font-family: 'Playfair Display', serif;
+  color: #ffd88a;
+  font-size: 1.25rem;
+  margin: 0;
+  letter-spacing: 0.5px;
+}
+
+.capture-shield-badge p {
+  color: #f7e6d0;
+  font-size: 0.92rem;
+  margin: 0;
+  line-height: 1.4;
+  opacity: 0.92;
+}
+
+.capture-shield-badge .capture-shield-telugu {
+  color: #e2b96f;
+  font-family: 'Noto Serif Telugu', serif;
+  font-size: 0.88rem;
+  margin-top: 4px;
+}
+
+/* Floating Photo Protection Toast */
+.photo-protect-toast {
+  position: fixed;
+  bottom: 28px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 999999;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  background: rgba(24, 12, 18, 0.94);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(226, 185, 111, 0.6);
+  box-shadow: 0 12px 35px rgba(0, 0, 0, 0.6), 0 0 15px rgba(226, 185, 111, 0.25);
+  color: #fff;
+  padding: 12px 22px;
+  border-radius: 30px;
+  font-family: 'Playfair Display', serif;
+  font-size: 0.88rem;
+  font-weight: 500;
+  letter-spacing: 0.3px;
+  animation: protectToastIn 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+  pointer-events: none;
+  max-width: min(92vw, 520px);
+  text-align: center;
+}
+
+@keyframes protectToastIn {
+  from { opacity: 0; transform: translate(-50%, 14px) scale(0.96); }
+  to { opacity: 1; transform: translate(-50%, 0) scale(1); }
+}
+
+.photo-protect-toast .toast-icon {
+  font-size: 1.15rem;
+  flex-shrink: 0;
+}
+
+.photo-protect-toast .toast-text {
+  color: #fbf6ec;
+  line-height: 1.35;
+}
+
+/* Print Protection: Completely Blanks Out Photos in Print & PDF export */
+@media print {
+  .photo-collage,
+  .gallery-lightbox,
+  .collage-item,
+  .lightbox-stage,
+  .photo-protect-shield,
+  .hvs-reel-video {
+    display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+  }
+}

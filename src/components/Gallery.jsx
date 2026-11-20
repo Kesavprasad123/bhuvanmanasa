@@ -179,6 +179,9 @@ const GALLERY_IMAGES = [
 
 function Gallery({ onPauseMusic }) {
   const [activePhotoIndex, setActivePhotoIndex] = useState(null);
+  const [isCaptureShielded, setIsCaptureShielded] = useState(false);
+  const [protectionToast, setProtectionToast] = useState('');
+  const toastTimeoutRef = useRef(null);
   const touchStartXRef = useRef(null);
 
   // Read configured YouTube Live URL or video ID from .env
@@ -190,12 +193,36 @@ function Gallery({ onPauseMusic }) {
 
   const liveVideoId = useMemo(() => parseYouTubeVideoId(youtubeLiveConfig), [youtubeLiveConfig]);
 
+  const showProtectionToast = useCallback(
+    (msg = '🔒 Protected Moments · Wedding photos cannot be downloaded or captured.') => {
+      if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
+      setProtectionToast(msg);
+      toastTimeoutRef.current = setTimeout(() => {
+        setProtectionToast('');
+      }, 2600);
+    },
+    []
+  );
+
+  const handlePhotoContextMenu = useCallback(
+    (e) => {
+      e.preventDefault();
+      showProtectionToast('🔒 Private Wedding Collection · Saving and downloading photos is disabled.');
+    },
+    [showProtectionToast]
+  );
+
+  const handlePhotoDragStart = useCallback((e) => {
+    e.preventDefault();
+  }, []);
+
   const openLightbox = (index) => {
     setActivePhotoIndex(index);
   };
 
   const closeLightbox = useCallback(() => {
     setActivePhotoIndex(null);
+    setIsCaptureShielded(false);
   }, []);
 
   const showNext = useCallback(() => {
@@ -208,29 +235,110 @@ function Gallery({ onPauseMusic }) {
     );
   }, []);
 
-  // Keyboard navigation for lightbox
+  // Keyboard navigation, screenshot blocking & snipping tool defense
   useEffect(() => {
-    if (activePhotoIndex === null) return;
-
     const handleKeyDown = (e) => {
+      // Escape closes lightbox
       if (e.key === 'Escape') {
         closeLightbox();
-      } else if (e.key === 'ArrowRight') {
-        showNext();
-      } else if (e.key === 'ArrowLeft') {
-        showPrev();
+        return;
+      }
+      // Left / Right arrows navigate
+      if (activePhotoIndex !== null) {
+        if (e.key === 'ArrowRight') {
+          showNext();
+          return;
+        }
+        if (e.key === 'ArrowLeft') {
+          showPrev();
+          return;
+        }
+      }
+
+      // 1. PrintScreen key
+      if (e.key === 'PrintScreen' || e.keyCode === 44) {
+        e.preventDefault();
+        setIsCaptureShielded(true);
+        try {
+          navigator.clipboard?.writeText?.('');
+        } catch {}
+        showProtectionToast('🔒 Screen Capture Blocked · Photographs of Bhuvan & Manasa are protected.');
+        setTimeout(() => setIsCaptureShielded(false), 2400);
+        return;
+      }
+
+      // 2. Block Print (Ctrl+P / Cmd+P)
+      if ((e.ctrlKey || e.metaKey) && (e.key === 'p' || e.key === 'P')) {
+        e.preventDefault();
+        showProtectionToast('🔒 Printing Disabled · Wedding photography is protected.');
+        return;
+      }
+
+      // 3. Block Save Page / Image (Ctrl+S / Cmd+S)
+      if ((e.ctrlKey || e.metaKey) && (e.key === 's' || e.key === 'S')) {
+        e.preventDefault();
+        showProtectionToast('🔒 Saving Disabled · Wedding photography is protected.');
+        return;
+      }
+
+      // 4. Mac Screenshot shortcuts (Cmd+Shift+3, Cmd+Shift+4, Cmd+Shift+5)
+      if (e.metaKey && e.shiftKey && ['3', '4', '5'].includes(e.key)) {
+        setIsCaptureShielded(true);
+        showProtectionToast('🔒 Screenshot Blocked · Wedding photos are protected.');
+        setTimeout(() => setIsCaptureShielded(false), 2400);
+        return;
+      }
+
+      // 5. Windows Snipping shortcut (Win+Shift+S / Ctrl+Shift+S)
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === 's' || e.key === 'S')) {
+        e.preventDefault();
+        setIsCaptureShielded(true);
+        showProtectionToast('🔒 Screen Clipping Blocked · Wedding photos are protected.');
+        setTimeout(() => setIsCaptureShielded(false), 2400);
+        return;
       }
     };
 
+    const handleKeyUp = (e) => {
+      if (e.key === 'PrintScreen' || e.keyCode === 44) {
+        setIsCaptureShielded(true);
+        try {
+          navigator.clipboard?.writeText?.('');
+        } catch {}
+        showProtectionToast('🔒 Screen Capture Blocked · Photographs of Bhuvan & Manasa are protected.');
+        setTimeout(() => setIsCaptureShielded(false), 2400);
+      }
+    };
+
+    // When Snipping Tool or screenshot utility takes focus away from browser
+    const handleWindowBlur = () => {
+      if (activePhotoIndex !== null) {
+        setIsCaptureShielded(true);
+      }
+    };
+
+    const handleWindowFocus = () => {
+      setIsCaptureShielded(false);
+    };
+
     window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('keyup', handleKeyUp);
+    window.addEventListener('blur', handleWindowBlur);
+    window.addEventListener('focus', handleWindowFocus);
+
     const originalOverflow = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
+    if (activePhotoIndex !== null) {
+      document.body.style.overflow = 'hidden';
+    }
 
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('keyup', handleKeyUp);
+      window.removeEventListener('blur', handleWindowBlur);
+      window.removeEventListener('focus', handleWindowFocus);
       document.body.style.overflow = originalOverflow;
     };
-  }, [activePhotoIndex, closeLightbox, showNext, showPrev]);
+  }, [activePhotoIndex, closeLightbox, showNext, showPrev, showProtectionToast]);
 
   // Touch swipe support for mobile lightbox
   const handleTouchStart = (e) => {
@@ -276,6 +384,8 @@ function Gallery({ onPauseMusic }) {
                 key={img.id}
                 className={`collage-item ${isLandscape ? 'is-landscape' : 'is-portrait'} ${img.desktopClass} ${img.mobileOrderClass}`}
                 onClick={() => openLightbox(index)}
+                onContextMenu={handlePhotoContextMenu}
+                onDragStart={handlePhotoDragStart}
                 aria-label={`View ${img.title} photo full size`}
               >
                 <img
@@ -283,6 +393,7 @@ function Gallery({ onPauseMusic }) {
                   alt={img.alt}
                   loading="lazy"
                   decoding="async"
+                  draggable="false"
                   width={img.width}
                   height={img.height}
                   style={{ objectPosition: img.objectPosition }}
@@ -291,6 +402,13 @@ function Gallery({ onPauseMusic }) {
                       ? '(max-width: 600px) 95vw, (max-width: 900px) 94vw, 580px'
                       : '(max-width: 600px) 46vw, (max-width: 900px) 46vw, 380px'
                   }
+                />
+                {/* Invisible Anti-Download Protective Shield */}
+                <div
+                  className="photo-protect-shield"
+                  aria-hidden="true"
+                  onContextMenu={handlePhotoContextMenu}
+                  onDragStart={handlePhotoDragStart}
                 />
                 <div className="collage-card-overlay">
                   <div className="collage-card-top-bar">
@@ -425,7 +543,7 @@ function Gallery({ onPauseMusic }) {
         </div>
       </div>
 
-      {/* ===== INTERACTIVE FULLSCREEN LIGHTBOX MODAL ===== */}
+      {/* ===== INTERACTIVE FULLSCREEN LIGHTBOX MODAL WITH FULL SCREENSHOT & COPY PROTECTION ===== */}
       {activePhoto && (
         <div
           className="gallery-lightbox"
@@ -433,6 +551,7 @@ function Gallery({ onPauseMusic }) {
           aria-modal="true"
           aria-label={`${activePhoto.title} preview`}
           onClick={closeLightbox}
+          onContextMenu={handlePhotoContextMenu}
           onTouchStart={handleTouchStart}
           onTouchEnd={handleTouchEnd}
         >
@@ -461,14 +580,44 @@ function Gallery({ onPauseMusic }) {
               &#8249;
             </button>
 
-            <div className="lightbox-stage">
+            <div className={`lightbox-stage${isCaptureShielded ? ' is-shielded' : ''}`}>
               <img
                 src={activePhoto.src}
                 alt={activePhoto.alt}
                 width={activePhoto.width}
                 height={activePhoto.height}
                 decoding="async"
+                draggable="false"
+                onContextMenu={handlePhotoContextMenu}
+                onDragStart={handlePhotoDragStart}
               />
+
+              {/* Protective Shield Overlay (interception against right-clicks / long-presses) */}
+              <div
+                className="photo-protect-shield"
+                aria-hidden="true"
+                onContextMenu={handlePhotoContextMenu}
+                onDragStart={handlePhotoDragStart}
+              />
+
+              {/* Subtle Luxury Watermark Overlay */}
+              <div className="lightbox-watermark" aria-hidden="true">
+                <span className="watermark-text">
+                  💍 Bhuvan &amp; Manasa · Sacred Matrimony · Protected Wedding Collection
+                </span>
+              </div>
+
+              {/* Screen Capture Blocker Shield (triggers on PrintScreen, screenshot hotkey, or window blur/snipping) */}
+              {isCaptureShielded && (
+                <div className="lightbox-capture-shield" aria-hidden="true">
+                  <div className="capture-shield-badge">
+                    <span className="shield-icon">🔒</span>
+                    <h4>Screen Capture Protected</h4>
+                    <p>Wedding photos of Bhuvan &amp; Manasa cannot be screenshot or saved.</p>
+                    <p className="capture-shield-telugu">శ్రీ భువన్ తేజ &amp; మానస వివాహ చిత్రాలు రక్షించబడ్డాయి</p>
+                  </div>
+                </div>
+              )}
             </div>
 
             <button
@@ -491,6 +640,14 @@ function Gallery({ onPauseMusic }) {
               </span>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Floating Photo Protection Toast */}
+      {protectionToast && (
+        <div className="photo-protect-toast" role="alert" aria-live="assertive">
+          <span className="toast-icon">🛡️</span>
+          <span className="toast-text">{protectionToast}</span>
         </div>
       )}
     </section>
