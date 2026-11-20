@@ -1122,8 +1122,6 @@
   .card-front {
     background-size: cover;
     background-position: center;
-    position: relative;
-    overflow: hidden;
     z-index: 2;
     transform: rotateY(0deg);
     opacity: 1;
